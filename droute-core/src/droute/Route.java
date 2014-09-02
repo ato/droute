@@ -35,7 +35,7 @@ public class Route implements Handler {
 				return handler.handle(request);
 			}
 		}
-		return Handler.NEXT;
+		return Response.NEXT_HANDLER;
 	}
 	
 	private final static Pattern KEY_PATTERN = Pattern.compile(":([a-z_][a-zA-Z0-9_]*)|\\*");
@@ -134,11 +134,11 @@ public class Route implements Handler {
 		public Response handle(Request request) {
 			for (Handler route : routes) {
 				Response result = route.handle(request);
-				if (result != Handler.NEXT) {
+				if (result != Response.NEXT_HANDLER) {
 					return result;
 				}
 			}
-			return Handler.NEXT;
+			return Response.NEXT_HANDLER;
 		}
 		
 		@Override

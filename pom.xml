@@ -9,5 +9,7 @@
       <module>droute-core</module>
       <module>droute-nanohttpd</module>
       <module>droute-shotgun</module>
+      <module>droute-handlebars</module>
+      <module>droute-freemarker</module>
   </modules>
 </project>

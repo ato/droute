@@ -3,18 +3,35 @@ package droute;
 import java.util.Map;
 
 public interface Response {
+	public static final Response NEXT_HANDLER = new Response.Impl(0, null, null);
+	
 	int status();
 	Map<String, String> headers();
 	Object body();
-	Response status(int status);
-	Response header(String header, String value);
-	Response headers(Map<String,String> headers);
-	Response body(Object body);
 
 	default String header(String header) {
 		return headers().get(header);
 	}
-	
+
+	default Response withStatus(int status) {
+		return response(status, headers(), body());
+	}
+
+	default Response withHeader(String header, String value) {
+		Map<String, String> map = headers();
+		Headers headers = map instanceof Headers ? (Headers)map : new Headers(map);
+		return new Impl(status(), headers.with(header, value), body());
+	}
+
+	default Response withHeaders(Map<String,String> headers) {
+		Headers hheaders = headers instanceof Headers ? (Headers)headers : new Headers(headers);
+		return new Impl(status(), hheaders, body());
+	}
+
+	default Response withBody(Object body) {
+		return response(status(), headers(), body());
+	}
+
 	public static Response response(int status, Map<String,String> headers, Object body) {
 		if (headers == null) {
 			return new Impl(status, Headers.EMPTY, body);			
@@ -28,7 +45,7 @@ public interface Response {
 	public static Response response(int status, Object body) {
 		return new Impl(status, Headers.EMPTY, body);
 	}
-	
+
 	public static Response response(Object body) {
 		return new Impl(200, Headers.EMPTY, body);
 	}
@@ -36,11 +53,11 @@ public interface Response {
 	public static Response redirect(String url) {
 		return new Impl(302, Headers.of("Location", url), null);
 	}
-	
+
 	public static Response notFound(Object body) {
 		return new Impl(404, Headers.EMPTY, body);
 	}
-	
+
 	static class Impl implements Response {
 		final int status;
 		final Headers headers;
@@ -68,17 +85,17 @@ public interface Response {
 		}
 
 		@Override
-		public Impl status(int status) {
+		public Impl withStatus(int status) {
 			return new Impl(status, headers, body);
 		}
 
 		@Override
-		public Impl header(String header, String value) {
+		public Impl withHeader(String header, String value) {
 			return new Impl(status, headers.with(header, value), body);
 		}
 
 		@Override
-		public Response headers(Map<String, String> headers) {
+		public Response withHeaders(Map<String, String> headers) {
 			if (headers instanceof Headers) {
 				return new Impl(status, (Headers)headers, body);
 			} else {
@@ -87,7 +104,7 @@ public interface Response {
 		}
 
 		@Override
-		public Impl body(Object body) {
+		public Impl withBody(Object body) {
 			return new Impl(status, headers, body);
 		}
 	}

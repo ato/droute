@@ -44,9 +44,11 @@ class ArrayMap<K, V> implements Map<K,V> {
 	}
 	
 	protected int indexOf(Object key) {
-		for (int i = 0; i < array.length; i += 2) {
-			if (Objects.equals(array[i], key)) {
-				return i;
+		if (key != null) {
+			for (int i = 0; i < array.length; i += 2) {
+				if (key.equals(array[i])) {
+					return i;
+				}
 			}
 		}
 		return -1;
