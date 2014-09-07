@@ -14,6 +14,7 @@ import droute.*;
 
 public class Example {
   Handler routes = routes(
+    resources("/webjars", "META-INF/resources/webjars"),
     GET("/", request -> response("Hello world")),
     GET("/things/:id", this::showThing, "id", "[0-9]+"),
     notFound("There's nothing here."),
