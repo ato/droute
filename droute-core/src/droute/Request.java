@@ -5,6 +5,7 @@ import java.util.Map;
 public interface Request {
 	String method();
 	String path();
+	String contextPath();
 	Map<String,String> params();
 	Map<String,String> urlParams();
 	Map<String,String> queryParams();

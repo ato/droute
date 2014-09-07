@@ -54,4 +54,9 @@ public class NanoRequest implements Request {
 		return raw;
 	}
 
+	@Override
+	public String contextPath() {
+		return "/";
+	}
+
 }

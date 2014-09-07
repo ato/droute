@@ -57,14 +57,28 @@ public class NanoServer extends NanoHTTPD {
 		return t;
 	}
 	
+	static int i = 0;
+	
 	private InputStream streamify(Object obj) {
 		if (obj instanceof InputStream) {
 			return (InputStream)obj;
+		} else if (obj == null) {
+			return new ByteArrayInputStream(new byte[0]);
 		} else if (obj instanceof Streamable) {
 			PipedInputStream in = new PipedInputStream(16*1024);
+			PipedOutputStream out;
+			try {
+				out = new PipedOutputStream(in);
+			} catch (IOException e1) {
+				throw new RuntimeException(e1);
+			}
 			threadPool.execute(() -> {
-				try (PipedOutputStream out = new PipedOutputStream(in)) {
-					((Streamable)obj).writeTo(out);
+				try {
+					try {
+						((Streamable)obj).writeTo(out);
+					} finally {
+						out.close();
+					}
 				} catch (Throwable e) {
 					if ("Read end dead".equals(rootCause(e).getMessage())) {
 						logger.log(Level.FINE, "Client likely closed connection", e);

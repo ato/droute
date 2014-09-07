@@ -1,5 +1,9 @@
 package droute;
 
+import static droute.Response.resource;
+
+import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +49,7 @@ public class Route implements Handler {
 		Matcher m = KEY_PATTERN.matcher(pattern);
 		int pos = 0;
 		while (m.find(pos)) {
-			out.append(Pattern.quote(pattern.substring(0, m.start())));
+			out.append(Pattern.quote(pattern.substring(pos, m.start())));
 			String key = m.group(1);
 			if (key == null) { // wildcard
 				out.append("(.*?)");
@@ -117,6 +121,26 @@ public class Route implements Handler {
 
 	public static Handler ANY(String pattern, Handler handler, String... paramsAndRegexs) {
 		return new Route(null, pattern, handler, paramsAndRegexs);
+	}
+	
+	public static Handler resources(String urlPrefix, String resourcesRoot) {
+		return GET(urlPrefix + "/*", (request) -> {
+			String path = resourcesRoot + "/" + request.param("*").replace("../", "");
+			URL url = Thread.currentThread().getContextClassLoader().getResource(path);
+			if (url != null) {
+				try {
+					return resource(url);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}			
+			} else {
+				return Response.NEXT_HANDLER;
+			}
+		});
+	}
+	
+	public static Handler notFound(Object body) {
+		return request -> Response.response(404, body);
 	}
 	
 	public static Handler routes(Handler... routes) {
