@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.net.ServerSocket;
 import java.nio.charset.Charset;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -17,9 +19,8 @@ import java.util.logging.Logger;
 
 import droute.Handler;
 import droute.Streamable;
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response.IStatus;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
+import droute.nanohttpd.NanoHTTPD.Response.IStatus;
+import droute.nanohttpd.NanoHTTPD.Response.Status;
 
 public class NanoServer extends NanoHTTPD {
 
@@ -36,12 +37,21 @@ public class NanoServer extends NanoHTTPD {
 		super(hostname, port);
 		this.handler = handler; 
 	}
+
+	public NanoServer(Handler handler, ServerSocket serverSocket) {
+		super(serverSocket);
+		this.handler = handler; 
+	}
+
 	
 	@Override
 	public Response serve(IHTTPSession session) {
 		droute.Response response = handler.handle(new NanoRequest(session));
 		InputStream body = streamify(response.body());
-		Response nanoResponse = new Response(lookupStatus(response.status()), response.header("content-type"), body);
+		Response nanoResponse = new Response(lookupStatus(response.status()), body);
+		for (Entry<String, String> entry : response.headers().entrySet()) {
+			nanoResponse.addHeader(entry.getKey(), entry.getValue());
+		}
 		if (response.header("Content-Length") != null || body instanceof ByteArrayInputStream) {
 			nanoResponse.setChunkedTransfer(false);			
 		} else {
@@ -132,8 +142,6 @@ public class NanoServer extends NanoHTTPD {
 			})	),
 				GET("/foo/:id", req -> response("foo " + req.param("id")), "id", "[0-9]+")); 
 		NanoServer server = new NanoServer(app, 8080);
-		server.start();
-		System.in.read();
+		server.startAndJoin();
 	}
-
 }

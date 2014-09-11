@@ -5,6 +5,7 @@ import static droute.Response.response;
 import static droute.Route.GET;
 import static org.junit.Assert.*;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,6 +31,7 @@ public class TestRoute {
 		Map<String,String> urlParams = new HashMap<>();
 		Map<String,String> queryParams = new HashMap<>();
 		Map<String,String> formParams = new HashMap<>();
+		Map<String,String> headers = new HashMap<>();
 		
 		public MockRequest(String path) {
 			this.path = path;
@@ -72,6 +74,35 @@ public class TestRoute {
 
 		@Override
 		public Object raw() {
+			return null;
+		}
+
+		@Override
+		public Map<String, String> headers() {
+			return headers;
+		}
+
+		@Override
+		public void setState(Object state) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public <T> T state(Class<T> state) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public URI uri() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public URI contextUri() {
+			// TODO Auto-generated method stub
 			return null;
 		}
 		

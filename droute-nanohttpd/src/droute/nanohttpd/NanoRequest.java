@@ -1,15 +1,20 @@
 package droute.nanohttpd;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
+import droute.Headers;
 import droute.Request;
-import fi.iki.elonen.NanoHTTPD.IHTTPSession;
+import droute.nanohttpd.NanoHTTPD.IHTTPSession;
 
 public class NanoRequest implements Request {
 
 	private final IHTTPSession raw;
-	private final Map<String,String> params, urlParams, queryParams, formParams;
+	private final Map<String,String> params, urlParams, queryParams, formParams, headers;
+	private final Map<Class<?>,Object> state;
+	private final URI uri;
 	
 	public NanoRequest(IHTTPSession session) {
 		this.raw = session;
@@ -17,6 +22,13 @@ public class NanoRequest implements Request {
 		queryParams = new HashMap<String,String>(session.getParms());
 		formParams = new HashMap<String,String>(session.getParms());
 		urlParams = new HashMap<String,String>();
+		headers = new Headers(session.getHeaders());
+		state = new HashMap<>();
+		try {
+			uri = new URI("http", headers.get("Host"), session.getUri(), session.getQueryParameterString(), null);
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
@@ -57,6 +69,32 @@ public class NanoRequest implements Request {
 	@Override
 	public String contextPath() {
 		return "/";
+	}
+
+	@Override
+	public Map<String, String> headers() {
+		return headers;
+	}
+
+	@Override
+	public void setState(Object state) {
+		this.state.put(state.getClass(), state);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T> T state(Class<T> stateType) {
+		return (T)this.state.get(stateType);
+	}
+
+	@Override
+	public URI uri() {
+		return uri;
+	}
+
+	@Override
+	public URI contextUri() {
+		return uri.resolve("/");
 	}
 
 }
