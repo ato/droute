@@ -32,7 +32,10 @@ public class Csrf {
 	 */
 	public static Handler protect(Handler handler, String cookieName, String formParam) {
 		return request -> {
-			String cookieToken = Tokens.sanitize(Cookies.get(request, cookieName));
+			String cookieToken = Cookies.get(request, cookieName);
+			if (!Tokens.isSane(cookieName)) {
+				cookieToken = null;
+			}
 			Csrf state = new Csrf(cookieToken);
 			request.setState(state);
 			if (!request.method().equals("GET") &&
