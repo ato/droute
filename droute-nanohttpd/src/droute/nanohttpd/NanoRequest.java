@@ -15,6 +15,7 @@ public class NanoRequest implements Request {
 	private final Map<String,String> params, urlParams, queryParams, formParams, headers;
 	private final Map<Class<?>,Object> state;
 	private final URI uri;
+	private final String contextPath;
 	
 	public NanoRequest(IHTTPSession session) {
 		this.raw = session;
@@ -24,8 +25,16 @@ public class NanoRequest implements Request {
 		urlParams = new HashMap<String,String>();
 		headers = new Headers(session.getHeaders());
 		state = new HashMap<>();
+		String path = session.getUri();
+		String xForwardedPath = headers.get("x-forwarded-path");
+		if (xForwardedPath != null && path.startsWith(xForwardedPath)) {
+			path = path.substring(xForwardedPath.length());
+			contextPath = xForwardedPath + "/";
+		} else {
+			contextPath = "/";
+		}
 		try {
-			uri = new URI("http", headers.get("Host"), session.getUri(), session.getQueryParameterString(), null);
+			uri = new URI("http", headers.get("Host"), path, session.getQueryParameterString(), null);
 		} catch (URISyntaxException e) {
 			throw new RuntimeException(e);
 		}
@@ -38,7 +47,7 @@ public class NanoRequest implements Request {
 
 	@Override
 	public String path() {
-		return raw.getUri();
+		return uri.getPath();
 	}
 
 	@Override
@@ -68,7 +77,7 @@ public class NanoRequest implements Request {
 
 	@Override
 	public String contextPath() {
-		return "/";
+		return contextPath;
 	}
 
 	@Override
@@ -94,7 +103,7 @@ public class NanoRequest implements Request {
 
 	@Override
 	public URI contextUri() {
-		return uri.resolve("/");
+		return uri.resolve(contextPath());
 	}
 
 }
