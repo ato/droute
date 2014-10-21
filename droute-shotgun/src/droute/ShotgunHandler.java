@@ -1,8 +1,12 @@
 package droute;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.meshy.jshotgun.Shotgun;
 
@@ -20,6 +24,7 @@ public class ShotgunHandler implements Handler {
 	private final Shotgun shotgun = new Shotgun(new Target(), blacklist);
 	private final String handlerClass;
 	private Handler handler;
+	private static final Logger logger = Logger.getLogger(ShotgunHandler.class.getName());
 	
 	public ShotgunHandler(String handlerClass) {
 		this.handlerClass = handlerClass;
@@ -40,6 +45,15 @@ public class ShotgunHandler implements Handler {
 
 		@Override
 		public void stop() {
+			try {
+				if (handler instanceof Closeable) {
+					((Closeable)handler).close();
+				} else if (handler instanceof AutoCloseable) {
+					((AutoCloseable)handler).close();
+				}
+			} catch (Exception e) {
+				logger.log(Level.WARNING, "Error closing " + handler, e);
+			}
 			handler = null;
 		}
 		
