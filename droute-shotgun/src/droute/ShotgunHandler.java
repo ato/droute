@@ -46,9 +46,7 @@ public class ShotgunHandler implements Handler {
 		@Override
 		public void stop() {
 			try {
-				if (handler instanceof Closeable) {
-					((Closeable)handler).close();
-				} else if (handler instanceof AutoCloseable) {
+				if (handler instanceof AutoCloseable) {
 					((AutoCloseable)handler).close();
 				}
 			} catch (Exception e) {
