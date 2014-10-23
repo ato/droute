@@ -33,7 +33,7 @@ public class Csrf {
 	public static Handler protect(Handler handler, String cookieName, String formParam) {
 		return request -> {
 			String cookieToken = Cookies.get(request, cookieName);
-			if (!Tokens.isSane(cookieName)) {
+			if (!Tokens.isSane(cookieToken)) {
 				cookieToken = null;
 			}
 			Csrf state = new Csrf(cookieToken);
@@ -47,7 +47,7 @@ public class Csrf {
 				if (formToken == null) {
 					formToken = request.formParam(formParam);
 				}
-				if (!state.isTokenValid(request.formParam(formToken))) {
+				if (!state.isTokenValid(formToken)) {
 					return response(400, "The cross-site request forgery protection form parameter (" + formParam + ") is missing or invalid.");
 				}
 			}
