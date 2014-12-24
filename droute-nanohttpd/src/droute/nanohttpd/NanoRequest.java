@@ -16,12 +16,15 @@ public class NanoRequest implements Request {
 	private final Map<Class<?>,Object> state;
 	private final URI uri;
 	private final String contextPath;
+	private final Map<String,String> files;
 	
-	public NanoRequest(IHTTPSession session) {
+	public NanoRequest(IHTTPSession session, Map<String, String> files) {
 		this.raw = session;
+		this.files = files;
 		params = new HashMap<String,String>(session.getParms());
+		params.putAll(session.getFormParms());
 		queryParams = new HashMap<String,String>(session.getParms());
-		formParams = new HashMap<String,String>(session.getParms());
+		formParams = new HashMap<String,String>(session.getFormParms());
 		urlParams = new HashMap<String,String>();
 		headers = new Headers(session.getHeaders());
 		state = new HashMap<>();
@@ -40,6 +43,10 @@ public class NanoRequest implements Request {
 		}
 	}
 
+	public String postBody() {
+		return files.get("postBody");
+	}
+	
 	@Override
 	public String method() {
 		return raw.getMethod().name();

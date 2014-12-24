@@ -44,6 +44,8 @@ public interface Request {
 	Map<String, String> queryParams();
 
 	Map<String, String> formParams();
+	
+	String postBody();
 
 	void setState(Object state);
 

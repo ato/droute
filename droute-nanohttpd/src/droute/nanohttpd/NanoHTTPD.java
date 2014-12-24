@@ -1,6 +1,20 @@
 package droute.nanohttpd;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.PushbackInputStream;
+import java.io.RandomAccessFile;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -192,6 +206,7 @@ public abstract class NanoHTTPD {
     public void start() throws IOException {
     	if (myServerSocket == null) {
     		myServerSocket = new ServerSocket();
+    		myServerSocket.setReuseAddress(true);
     		myServerSocket.bind((hostname != null) ? new InetSocketAddress(hostname, myPort) : new InetSocketAddress(myPort));
     	}
     	
@@ -835,7 +850,9 @@ public abstract class NanoHTTPD {
     public interface IHTTPSession {
         void execute() throws IOException;
 
-        Map<String, String> getParms();
+        Map<String, String> getFormParms();
+
+		Map<String, String> getParms();
 
         Map<String, String> getHeaders();
 
@@ -867,6 +884,7 @@ public abstract class NanoHTTPD {
         private String uri;
         private Method method;
         private Map<String, String> parms;
+        private Map<String, String> formParms;
         private Map<String, String> headers;
         private String queryParameterString;
 
@@ -926,8 +944,11 @@ public abstract class NanoHTTPD {
                 }
 
                 parms = new HashMap<String, String>();
+                formParms = new HashMap<String, String>();
                 if(null == headers) {
                     headers = new HashMap<String, String>();
+                } else {
+                	headers.clear();
                 }
 
                 // Create a BufferedReader for parsing the header.
@@ -948,10 +969,9 @@ public abstract class NanoHTTPD {
                 Response r = serve(this);
                 if (r == null) {
                     throw new ResponseException(Response.Status.INTERNAL_ERROR, "SERVER INTERNAL ERROR: Serve() returned a null response.");
-                } else {
-                    r.setRequestMethod(method);
-                    r.send(outputStream);
                 }
+                r.setRequestMethod(method);
+                r.send(outputStream);
             } catch (SocketException e) {
                 // throw it out to close socket object (finalAccept)
                 throw e;
@@ -962,7 +982,9 @@ public abstract class NanoHTTPD {
                 r.send(outputStream);
                 safeClose(outputStream);
             } catch (ResponseException re) {
-                Response r = new Response(re.getStatus(), MIME_PLAINTEXT, re.getMessage());
+            	StringWriter sw = new StringWriter();
+            	re.printStackTrace(new PrintWriter(sw));
+                Response r = new Response(re.getStatus(), MIME_PLAINTEXT, re.getMessage() + "\n\n" + sw);
                 r.send(outputStream);
                 safeClose(outputStream);
             } finally {
@@ -1032,7 +1054,7 @@ public abstract class NanoHTTPD {
                             boundary = boundary.substring(1, boundary.length() - 1);
                         }
 
-                        decodeMultipartData(boundary, fbuf, in, parms, files);
+                        decodeMultipartData(boundary, fbuf, in, formParms, files);
                     } else {
                         String postLine = "";
                         StringBuilder postLineBuffer = new StringBuilder();
@@ -1046,7 +1068,7 @@ public abstract class NanoHTTPD {
                         postLine = postLineBuffer.toString().trim();
                         // Handle application/x-www-form-urlencoded
                         if ("application/x-www-form-urlencoded".equalsIgnoreCase(contentType)) {
-                        	decodeParms(postLine, parms);
+                        	decodeParms(postLine, formParms);
                         } else if (postLine.length() != 0) {
                         	// Special case for raw POST data => create a special files entry "postData" with raw content data
                         	files.put("postData", postLine);
@@ -1306,6 +1328,11 @@ public abstract class NanoHTTPD {
         @Override
         public final Map<String, String> getParms() {
             return parms;
+        }
+        
+        @Override
+        public final Map<String, String> getFormParms() {
+            return formParms;
         }
 
 		public String getQueryParameterString() {

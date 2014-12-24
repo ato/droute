@@ -1,9 +1,8 @@
 package droute;
 
-import static droute.Response.NEXT_HANDLER;
 import static droute.Response.response;
 import static droute.Route.GET;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -102,6 +101,12 @@ public class TestRoute {
 
 		@Override
 		public URI contextUri() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public String postBody() {
 			// TODO Auto-generated method stub
 			return null;
 		}

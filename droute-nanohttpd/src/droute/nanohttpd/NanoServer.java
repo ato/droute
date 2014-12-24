@@ -9,8 +9,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.ServerSocket;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,7 +50,23 @@ public class NanoServer extends NanoHTTPD {
 	
 	@Override
 	public Response serve(IHTTPSession session) {
-		droute.Response response = handler.handle(new NanoRequest(session));
+		Map<String,String> files = new HashMap<>();
+		/*if ("application/x-www-form-urlencoded".equalsIgnoreCase(session
+				.getHeaders().get("content-type"))) {*/
+			try {
+				session.parseBody(files);
+			} catch (IOException ioe) {
+				StringWriter sw = new StringWriter();
+				ioe.printStackTrace(new PrintWriter(sw));
+				return new Response(Response.Status.INTERNAL_ERROR,
+						MIME_PLAINTEXT, "SERVER INTERNAL ERROR: IOException: "
+								+ ioe.getMessage() + "\n\n" + sw);
+			} catch (ResponseException re) {
+				return new Response(re.getStatus(), MIME_PLAINTEXT,
+						re.getMessage());
+			}
+		//}
+		droute.Response response = handler.handle(new NanoRequest(session, files));
 		InputStream body = streamify(response.body());
 		Response nanoResponse = new Response(lookupStatus(response.status()), body);
 		for (Entry<String, String> entry : response.headers().entrySet()) {
