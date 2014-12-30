@@ -24,7 +24,7 @@ class ArrayMap<K, V> implements Map<K,V> {
 	
 	ArrayMap(Object[] array) {
 		if (array.length % 2 != 0) {
-			throw new IllegalArgumentException("an array of even legnth is required");
+			throw new IllegalArgumentException("an array of even length is required");
 		}
 		this.array = array;
 	}
@@ -40,7 +40,7 @@ class ArrayMap<K, V> implements Map<K,V> {
 
 	@Override
 	public void clear() {
-		throw new UnsupportedOperationException("ArrayMaps cannot be modified in place");
+		throw new UnsupportedOperationException("ArrayMap cannot be modified in place");
 	}
 	
 	protected int indexOf(Object key) {
@@ -206,17 +206,17 @@ class ArrayMap<K, V> implements Map<K,V> {
 
 	@Override
 	public V put(K key, V value) {
-		throw new UnsupportedOperationException("ArrayMaps cannot be modified in place");
+		throw new UnsupportedOperationException("ArrayMap cannot be modified in place");
 	}
 
 	@Override
 	public void putAll(Map<? extends K, ? extends V> map) {
-		throw new UnsupportedOperationException("ArrayMaps cannot be modified in place");
+		throw new UnsupportedOperationException("ArrayMap cannot be modified in place");
 	}
 
 	@Override
 	public V remove(Object key) {
-		throw new UnsupportedOperationException("ArrayMaps cannot be modified in place");
+		throw new UnsupportedOperationException("ArrayMap cannot be modified in place");
 	}
 
 	@Override
