@@ -140,7 +140,7 @@ public class NanoServer extends NanoHTTPD {
 
 			@Override
 			public String getDescription() {
-				return "Unknown";
+				return statusCode + " Status " + statusCode;
 			}
 			
 		};

@@ -59,8 +59,16 @@ public interface Response {
 		return new Impl(200, Headers.EMPTY, body);
 	}
 
+	public static Response redirect(int status, String url) {
+		return new Impl(status, Headers.of("Location", url), null);
+	}
+
+	public static Response seeOther(String url) {
+		return redirect(303, url);
+	}
+
 	public static Response redirect(String url) {
-		return new Impl(302, Headers.of("Location", url), null);
+		return redirect(302, url);
 	}
 	
 	public static Response resource(URL resource) throws IOException {
