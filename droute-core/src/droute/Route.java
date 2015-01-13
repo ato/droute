@@ -140,7 +140,7 @@ public class Route implements Handler {
 	}
 	
 	public static Handler notFoundHandler(Object body) {
-		return Response::notFound;
+		return request -> Response.notFound(body);
 	}
 	
 	public static Handler routes(Handler... routes) {
