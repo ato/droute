@@ -59,18 +59,51 @@ public interface Response {
 		return new Impl(200, Headers.EMPTY, body);
 	}
 
+	/**
+	 * Sends an empty response with the given status code and Location header. If appropriate you should
+	 * use {@link #seeOther(String)}, {@link #temporaryRedirect(String)} or {@link #permanentRedirect(String)}
+	 * instead of calling this method directly.
+	 */
 	public static Response redirect(int status, String url) {
 		return new Impl(status, Headers.of("Location", url), null);
 	}
 
+	/**
+	 * Returns a 303 See Other response. Even if the initial request was a POST the browser will fetch
+	 * the redirect location using GET.
+	 */
 	public static Response seeOther(String url) {
 		return redirect(303, url);
 	}
 
-	public static Response redirect(String url) {
-		return redirect(302, url);
+	/**
+	 * Returns a 307 Temporary Redirect response. The browser should repeat the request against the given
+	 * URL. However as this is temporary, future requests should still be made against the original URL.
+	 *
+	 * Note that {@link #seeOther(String)} should instead be used when redirecting to a new page after
+	 * processing a POST.
+	 */
+	public static Response temporaryRedirect(String url) {
+		return redirect(307, url);
 	}
-	
+
+	/**
+	 * Returns a 307 Permanent Redirect response. The browser should repeat the request against the given
+	 * URL. As this is permanent, future requests should still be made against the new URL.  Browsers often
+	 * cache this redirect and search engines often replace the original URL with the redirect target in
+	 * their indexes.
+	 *
+	 * Note that {@link #seeOther(String)} should instead be used when redirecting to a new page after
+	 * processing a POST.
+	 */
+	public static Response permanentRedirect(String url) {
+		return redirect(301, url);
+	}
+
+	/**
+	 * Sends a classpath resource to the client.  Sets the Last-Modified, Content-Length and Content-Type
+	 * headers when possible.
+	 */
 	public static Response resource(URL resource) throws IOException {
 		if (resource == null) {
 			return response(404, "Resource not found");
