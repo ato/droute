@@ -139,8 +139,8 @@ public class Route implements Handler {
 		});
 	}
 	
-	public static Handler notFound(Object body) {
-		return request -> Response.response(404, body);
+	public static Handler notFoundHandler(Object body) {
+		return Response::notFound;
 	}
 	
 	public static Handler routes(Handler... routes) {

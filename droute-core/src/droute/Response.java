@@ -60,6 +60,13 @@ public interface Response {
 	}
 
 	/**
+	 * Returns a 404 Not Found response.
+	 */
+	public static Response notFound(Object body) {
+		return response(404, body);
+	}
+
+	/**
 	 * Sends an empty response with the given status code and Location header. If appropriate you should
 	 * use {@link #seeOther(String)}, {@link #temporaryRedirect(String)} or {@link #permanentRedirect(String)}
 	 * instead of calling this method directly.
