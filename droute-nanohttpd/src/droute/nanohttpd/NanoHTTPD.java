@@ -1,5 +1,7 @@
 package droute.nanohttpd;
 
+import droute.MultiMap;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -326,12 +328,12 @@ public abstract class NanoHTTPD {
      *
      * @param uri     Percent-decoded URI without parameters, for example "/index.cgi"
      * @param method  "GET", "POST" etc.
-     * @param parms   Parsed, percent decoded parameters from URI and, in case of POST, data.
      * @param headers Header entries, percent decoded
+     * @param parms   Parsed, percent decoded parameters from URI and, in case of POST, data.
      * @return HTTP response, see class Response for details
      */
     @Deprecated
-    public Response serve(String uri, Method method, Map<String, String> headers, Map<String, String> parms,
+    public Response serve(String uri, Method method, Map<String, String> headers, MultiMap parms,
                                    Map<String, String> files) {
         return new Response(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not Found");
     }
@@ -358,7 +360,7 @@ public abstract class NanoHTTPD {
             }
         }
 
-        Map<String, String> parms = session.getParms();
+        MultiMap parms = session.getParms();
         parms.put(QUERY_STRING_PARAMETER, session.getQueryParameterString());
         return serve(session.getUri(), method, session.getHeaders(), parms, files);
     }
@@ -850,9 +852,9 @@ public abstract class NanoHTTPD {
     public interface IHTTPSession {
         void execute() throws IOException;
 
-        Map<String, String> getFormParms();
+        MultiMap getFormParms();
 
-		Map<String, String> getParms();
+		MultiMap getParms();
 
         Map<String, String> getHeaders();
 
@@ -883,8 +885,8 @@ public abstract class NanoHTTPD {
         private int rlen;
         private String uri;
         private Method method;
-        private Map<String, String> parms;
-        private Map<String, String> formParms;
+        private MultiMap parms;
+        private MultiMap formParms;
         private Map<String, String> headers;
         private String queryParameterString;
 
@@ -943,8 +945,8 @@ public abstract class NanoHTTPD {
                     inputStream.unread(buf, splitbyte, rlen - splitbyte);
                 }
 
-                parms = new HashMap<String, String>();
-                formParms = new HashMap<String, String>();
+                parms = new MultiMap();
+                formParms = new MultiMap();
                 if(null == headers) {
                     headers = new HashMap<String, String>();
                 } else {
@@ -1086,7 +1088,7 @@ public abstract class NanoHTTPD {
         /**
          * Decodes the sent headers and loads the data into Key/value pairs
          */
-        private void decodeHeader(BufferedReader in, Map<String, String> pre, Map<String, String> parms, Map<String, String> headers)
+        private void decodeHeader(BufferedReader in, Map<String, String> pre, MultiMap parms, Map<String, String> headers)
             throws ResponseException {
             try {
                 // Read the request line
@@ -1140,7 +1142,7 @@ public abstract class NanoHTTPD {
         /**
          * Decodes the Multipart Body data and put it into Key/Value pairs.
          */
-        private void decodeMultipartData(String boundary, ByteBuffer fbuf, BufferedReader in, Map<String, String> parms,
+        private void decodeMultipartData(String boundary, ByteBuffer fbuf, BufferedReader in, MultiMap parms,
                                          Map<String, String> files) throws ResponseException {
             try {
                 int[] bpositions = getBoundaryPositions(fbuf, boundary.getBytes());
@@ -1305,7 +1307,7 @@ public abstract class NanoHTTPD {
          * Decodes parameters in percent-encoded URI-format ( e.g. "name=Jack%20Daniels&pass=Single%20Malt" ) and
          * adds them to given Map. NOTE: this doesn't support multiple identical keys due to the simplicity of Map.
          */
-        private void decodeParms(String parms, Map<String, String> p) {
+        private void decodeParms(String parms, MultiMap p) {
             if (parms == null) {
                 queryParameterString = "";
                 return;
@@ -1326,12 +1328,12 @@ public abstract class NanoHTTPD {
         }
 
         @Override
-        public final Map<String, String> getParms() {
+        public final MultiMap getParms() {
             return parms;
         }
         
         @Override
-        public final Map<String, String> getFormParms() {
+        public final MultiMap getFormParms() {
             return formParms;
         }
 

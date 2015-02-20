@@ -6,13 +6,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 import droute.Headers;
+import droute.MultiMap;
 import droute.Request;
 import droute.nanohttpd.NanoHTTPD.IHTTPSession;
 
 public class NanoRequest implements Request {
 
 	private final IHTTPSession raw;
-	private final Map<String,String> params, urlParams, queryParams, formParams, headers;
+	private final MultiMap params, urlParams, queryParams, formParams;
+    private final Map<String,String> headers;
 	private final Map<Class<?>,Object> state;
 	private final URI uri;
 	private final String contextPath;
@@ -21,11 +23,12 @@ public class NanoRequest implements Request {
 	public NanoRequest(IHTTPSession session, Map<String, String> files) {
 		this.raw = session;
 		this.files = files;
-		params = new HashMap<String,String>(session.getParms());
+		params = new MultiMap();
+        params.putAll(session.getParms());
 		params.putAll(session.getFormParms());
-		queryParams = new HashMap<String,String>(session.getParms());
-		formParams = new HashMap<String,String>(session.getFormParms());
-		urlParams = new HashMap<String,String>();
+		queryParams = session.getParms();
+		formParams = session.getFormParms();
+		urlParams = new MultiMap();
 		headers = new Headers(session.getHeaders());
 		state = new HashMap<>();
 		String path = session.getUri();
@@ -58,22 +61,22 @@ public class NanoRequest implements Request {
 	}
 
 	@Override
-	public Map<String, String> params() {
+	public MultiMap params() {
 		return params;
 	}
 
 	@Override
-	public Map<String, String> urlParams() {
+	public MultiMap urlParams() {
 		return urlParams;
 	}
 
 	@Override
-	public Map<String, String> queryParams() {
+	public MultiMap queryParams() {
 		return queryParams;
 	}
 
 	@Override
-	public Map<String, String> formParams() {
+	public MultiMap formParams() {
 		return formParams;
 	}
 	

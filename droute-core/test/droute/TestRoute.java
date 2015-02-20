@@ -23,14 +23,15 @@ public class TestRoute {
 		Response response = handler.handle(new MockRequest("/foo/000/bar"));
 		assertEquals("matched", response.body());
 	}
-	
-	static class MockRequest implements Request {
+
+
+    static class MockRequest implements Request {
 		String path;
-		Map<String,String> params = new HashMap<>();
-		Map<String,String> urlParams = new HashMap<>();
-		Map<String,String> queryParams = new HashMap<>();
-		Map<String,String> formParams = new HashMap<>();
-		Map<String,String> headers = new HashMap<>();
+		MultiMap params = new MultiMap();
+        MultiMap urlParams = new MultiMap();
+        MultiMap queryParams = new MultiMap();
+        MultiMap formParams = new MultiMap();
+        HashMap<String,String> headers = new HashMap<>();
 		
 		public MockRequest(String path) {
 			this.path = path;
@@ -52,22 +53,22 @@ public class TestRoute {
 		}
 
 		@Override
-		public Map<String, String> params() {
+		public MultiMap params() {
 			return params;
 		}
 
 		@Override
-		public Map<String, String> urlParams() {
+		public MultiMap urlParams() {
 			return urlParams;
 		}
 
 		@Override
-		public Map<String, String> queryParams() {
+		public MultiMap queryParams() {
 			return queryParams;
 		}
 
 		@Override
-		public Map<String, String> formParams() {
+		public MultiMap formParams() {
 			return formParams;
 		}
 

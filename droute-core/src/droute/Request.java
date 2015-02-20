@@ -37,13 +37,13 @@ public interface Request {
 	/**
 	 * A combined map of all URL, query and form parameters.
 	 */
-	Map<String, String> params();
+	MultiMap params();
 
-	Map<String, String> urlParams();
+	MultiMap urlParams();
 
-	Map<String, String> queryParams();
+	MultiMap queryParams();
 
-	Map<String, String> formParams();
+	MultiMap formParams();
 	
 	String postBody();
 
@@ -52,19 +52,19 @@ public interface Request {
 	<T> T state(Class<T> state);
 
 	default String param(String key) {
-		return params().get(key);
+		return params().getFirst(key);
 	}
 
 	default String urlParam(String key) {
-		return urlParams().get(key);
+		return urlParams().getFirst(key);
 	}
 
 	default String queryParam(String key) {
-		return queryParams().get(key);
+		return queryParams().getFirst(key);
 	}
 
 	default String formParam(String key) {
-		return formParams().get(key);
+		return formParams().getFirst(key);
 	}
 
 	default String header(String name) {
