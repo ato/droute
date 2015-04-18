@@ -5,10 +5,7 @@ import droute.Streamable;
 import droute.nanohttpd.NanoHTTPD.Response.IStatus;
 import droute.nanohttpd.NanoHTTPD.Response.Status;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -86,10 +83,19 @@ public class NanoServer extends NanoHTTPD {
 	static int i = 0;
 	
 	private Streamable streamify(Object obj) {
-		if (obj instanceof Streamable) {
-			return (Streamable)obj;
-		} else if (obj == null) {
-			return (out) -> {};
+		if (obj == null) {
+			return null;
+		} else if (obj instanceof Streamable) {
+			return (Streamable) obj;
+		} else if (obj instanceof InputStream) {
+			return (out) -> {
+				InputStream in = (InputStream)obj;
+				byte buf[] = new byte[16384];
+				int len;
+				while ((len = in.read(buf)) >= 0) {
+					out.write(buf, 0, len);
+				}
+			};
 		} else if (obj instanceof String) {
 			return (out) -> out.write(((String)obj).getBytes(StandardCharsets.UTF_8));
 		} else {
