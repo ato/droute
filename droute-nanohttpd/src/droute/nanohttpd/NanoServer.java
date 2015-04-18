@@ -1,31 +1,26 @@
 package droute.nanohttpd;
 
-import static droute.Response.response;
-import static droute.Route.GET;
-import static droute.Route.routes;
+import droute.Handler;
+import droute.Streamable;
+import droute.nanohttpd.NanoHTTPD.Response.IStatus;
+import droute.nanohttpd.NanoHTTPD.Response.Status;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.ServerSocket;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import droute.Handler;
-import droute.Streamable;
-import droute.nanohttpd.NanoHTTPD.Response.IStatus;
-import droute.nanohttpd.NanoHTTPD.Response.Status;
+import static droute.Response.response;
+import static droute.Route.GET;
+import static droute.Route.routes;
 
 public class NanoServer extends NanoHTTPD {
 
