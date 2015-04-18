@@ -1,6 +1,7 @@
 package droute.nanohttpd;
 
 import droute.MultiMap;
+import droute.Streamable;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -26,6 +27,7 @@ import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -608,7 +610,7 @@ public abstract class NanoHTTPD {
         /**
          * Data of the response, may be null.
          */
-        private InputStream data;
+        private Streamable data;
         /**
          * Headers for the HTTP response. Use addHeader() to add lines.
          */
@@ -632,7 +634,7 @@ public abstract class NanoHTTPD {
         /**
          * Basic constructor.
          */
-        public Response(IStatus status, InputStream data) {
+        public Response(IStatus status, Streamable data) {
             this.status = status;
             this.data = data;
         }
@@ -642,10 +644,12 @@ public abstract class NanoHTTPD {
          */
         public Response(IStatus status, String mimeType, String txt) {
             this.status = status;
-            try {
-                this.data = txt != null ? new ByteArrayInputStream(txt.getBytes("UTF-8")) : null;
-            } catch (java.io.UnsupportedEncodingException uee) {
-                uee.printStackTrace();
+            if (txt != null) {
+                this.data = (OutputStream out) -> {
+                    out.write(txt.getBytes(StandardCharsets.UTF_8));
+                };
+            } else {
+                this.data = null;
             }
             addHeader("Content-Type", mimeType);
         }
@@ -659,6 +663,17 @@ public abstract class NanoHTTPD {
 
         public String getHeader(String name) {
             return header.get(name);
+        }
+
+        public long getContentLength() {
+            String value = header.get("Content-Length");
+            if (value == null) {
+                value = header.get("content-length");
+            }
+            if (value == null) {
+                return -1;
+            }
+            return Long.parseLong(value);
         }
 
         /**
@@ -687,18 +702,16 @@ public abstract class NanoHTTPD {
                 }
 
                 sendConnectionHeaderIfNotAlreadyPresent(pw, header);
+                long contentLength = getContentLength();
 
-                if (requestMethod != Method.HEAD && chunkedTransfer) {
+                if (requestMethod != Method.HEAD && chunkedTransfer || contentLength == -1) {
                     sendAsChunked(outputStream, pw);
                 } else {
-                    int pending = data != null ? data.available() : 0;
-                    sendContentLengthHeaderIfNotAlreadyPresent(pw, header, pending);
                     pw.print("\r\n");
                     pw.flush();
-                    sendAsFixedLength(outputStream, pending);
+                    sendAsFixedLength(outputStream, contentLength);
                 }
                 outputStream.flush();
-                safeClose(data);
             } catch (IOException ioe) {
                 // Couldn't write? No can do.
             }
@@ -728,30 +741,15 @@ public abstract class NanoHTTPD {
             pw.print("Transfer-Encoding: chunked\r\n");
             pw.print("\r\n");
             pw.flush();
-            int BUFFER_SIZE = 16 * 1024;
-            byte[] CRLF = "\r\n".getBytes();
-            byte[] buff = new byte[BUFFER_SIZE];
-            int read;
-            while ((read = data.read(buff)) > 0) {
-                outputStream.write(String.format("%x\r\n", read).getBytes());
-                outputStream.write(buff, 0, read);
-                outputStream.write(CRLF);
-            }
+
+            ChunkingOutputStream chunkingStream = new ChunkingOutputStream(outputStream);
+            data.writeTo(chunkingStream);
             outputStream.write(String.format("0\r\n\r\n").getBytes());
         }
 
-        private void sendAsFixedLength(OutputStream outputStream, int pending) throws IOException {
+        private void sendAsFixedLength(OutputStream outputStream, long pending) throws IOException {
             if (requestMethod != Method.HEAD && data != null) {
-                int BUFFER_SIZE = 16 * 1024;
-                byte[] buff = new byte[BUFFER_SIZE];
-                while (pending > 0) {
-                    int read = data.read(buff, 0, ((pending > BUFFER_SIZE) ? BUFFER_SIZE : pending));
-                    if (read <= 0) {
-                        break;
-                    }
-                    outputStream.write(buff, 0, read);
-                    pending -= read;
-                }
+                data.writeTo(outputStream);
             }
         }
 
@@ -763,11 +761,11 @@ public abstract class NanoHTTPD {
             this.status = status;
         }
 
-        public InputStream getData() {
+        public Streamable getData() {
             return data;
         }
 
-        public void setData(InputStream data) {
+        public void setData(Streamable data) {
             this.data = data;
         }
 
@@ -813,6 +811,33 @@ public abstract class NanoHTTPD {
             public String getDescription() {
                 return "" + this.requestStatus + " " + description;
             }
+        }
+    }
+
+    public static final class ChunkingOutputStream extends OutputStream {
+        OutputStream out;
+
+        public ChunkingOutputStream(OutputStream out) {
+            this.out = out;
+        }
+
+        @Override
+        public void flush() throws IOException {
+            out.flush();
+        }
+
+        @Override
+        public void write(byte[] bytes, int start, int length) throws IOException {
+            out.write(String.format("%x\r\n", length).getBytes(StandardCharsets.US_ASCII));
+            out.write(bytes, start, length);
+            out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+        }
+
+        @Override
+        public void write(int i) throws IOException {
+            out.write("1\r\n".getBytes(StandardCharsets.US_ASCII));
+            out.write(i);
+            out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
         }
     }
 

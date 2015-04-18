@@ -13,6 +13,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.ServerSocket;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -67,7 +68,7 @@ public class NanoServer extends NanoHTTPD {
 			}
 		//}
 		droute.Response response = handler.handle(new NanoRequest(session, files));
-		InputStream body = streamify(response.body());
+		Streamable body = streamify(response.body());
 		Response nanoResponse = new Response(lookupStatus(response.status()), body);
 		for (Entry<String, String> entry : response.headers().entrySet()) {
 			nanoResponse.addHeader(entry.getKey(), entry.getValue());
@@ -89,37 +90,13 @@ public class NanoServer extends NanoHTTPD {
 	
 	static int i = 0;
 	
-	private InputStream streamify(Object obj) {
-		if (obj instanceof InputStream) {
-			return (InputStream)obj;
+	private Streamable streamify(Object obj) {
+		if (obj instanceof Streamable) {
+			return (Streamable)obj;
 		} else if (obj == null) {
-			return new ByteArrayInputStream(new byte[0]);
-		} else if (obj instanceof Streamable) {
-			PipedInputStream in = new PipedInputStream(16*1024);
-			PipedOutputStream out;
-			try {
-				out = new PipedOutputStream(in);
-			} catch (IOException e1) {
-				throw new RuntimeException(e1);
-			}
-			threadPool.execute(() -> {
-				try {
-					try {
-						((Streamable)obj).writeTo(out);
-					} finally {
-						out.close();
-					}
-				} catch (Throwable e) {
-					if ("Read end dead".equals(rootCause(e).getMessage())) {
-						logger.log(Level.FINE, "Client likely closed connection", e);
-					} else {
-						logger.log(Level.SEVERE, "Exception streaming output from " + obj, e);
-					}
-				}
-			});
-			return in;
+			return (out) -> {};
 		} else if (obj instanceof String) {
-			return new ByteArrayInputStream(((String)obj).getBytes(Charset.forName("utf-8")));
+			return (out) -> out.write(((String)obj).getBytes(StandardCharsets.UTF_8));
 		} else {
 			throw new IllegalArgumentException("unable to handle body of type " + obj.getClass());
 		}
