@@ -125,7 +125,7 @@ public class Route implements Handler {
 	
 	public static Handler resources(String urlPrefix, String resourcesRoot) {
 		return GET(urlPrefix + "/*", (request) -> {
-			String path = resourcesRoot + "/" + request.param("*").replace("../", "");
+			String path = resourcesRoot + "/" + request.urlParam("*").replace("../", "");
 			URL url = Thread.currentThread().getContextClassLoader().getResource(path);
 			if (url != null) {
 				try {
