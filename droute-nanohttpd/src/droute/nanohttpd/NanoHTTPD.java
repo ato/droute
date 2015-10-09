@@ -679,7 +679,7 @@ public abstract class NanoHTTPD {
         /**
          * Sends given response to the socket.
          */
-        protected void send(OutputStream outputStream) {
+        protected void send(OutputStream outputStream, boolean keepAlive) {
             SimpleDateFormat gmtFrmt = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
             gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
 
@@ -701,7 +701,7 @@ public abstract class NanoHTTPD {
                     }
                 }
 
-                sendConnectionHeaderIfNotAlreadyPresent(pw, header);
+                sendConnectionHeaderIfNotAlreadyPresent(pw, header, keepAlive);
                 long contentLength = getContentLength();
 
                 if (requestMethod != Method.HEAD && chunkedTransfer || contentLength == -1) {
@@ -723,9 +723,13 @@ public abstract class NanoHTTPD {
             }
         }
 
-        protected void sendConnectionHeaderIfNotAlreadyPresent(PrintWriter pw, Map<String, String> header) {
+        protected void sendConnectionHeaderIfNotAlreadyPresent(PrintWriter pw, Map<String, String> header, boolean keepAlive) {
             if (!headerAlreadySent(header, "connection")) {
-                pw.print("Connection: keep-alive\r\n");
+                if (keepAlive) {
+                    pw.print("Connection: keep-alive\r\n");
+                } else {
+                    pw.print("Connection: close\r\n");
+                }
             }
         }
 
@@ -914,6 +918,7 @@ public abstract class NanoHTTPD {
         private MultiMap formParms;
         private Map<String, String> headers;
         private String queryParameterString;
+        private boolean http11 = false;
 
         public HTTPSession(TempFileManager tempFileManager, InputStream inputStream, OutputStream outputStream) {
             this.tempFileManager = tempFileManager;
@@ -992,13 +997,24 @@ public abstract class NanoHTTPD {
 
                 uri = pre.get("uri");
 
+                boolean keepAlive = http11;
+                String connection = headers.get("connection");
+                if ("close".equals(connection)) {
+                    keepAlive = false;
+                } else if ("keep-alive".equals(connection)) {
+                    keepAlive = true;
+                }
+
                 // Ok, now do the serve()
                 Response r = serve(this);
                 if (r == null) {
                     throw new ResponseException(Response.Status.INTERNAL_ERROR, "SERVER INTERNAL ERROR: Serve() returned a null response.");
                 }
                 r.setRequestMethod(method);
-                r.send(outputStream);
+                r.send(outputStream, keepAlive);
+                if (!keepAlive) {
+                    safeClose(outputStream);
+                }
             } catch (SocketException e) {
                 // throw it out to close socket object (finalAccept)
                 throw e;
@@ -1006,13 +1022,13 @@ public abstract class NanoHTTPD {
             	throw ste;
             } catch (IOException ioe) {
                 Response r = new Response(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
-                r.send(outputStream);
+                r.send(outputStream, false);
                 safeClose(outputStream);
             } catch (ResponseException re) {
             	StringWriter sw = new StringWriter();
             	re.printStackTrace(new PrintWriter(sw));
                 Response r = new Response(re.getStatus(), MIME_PLAINTEXT, re.getMessage() + "\n\n" + sw);
-                r.send(outputStream);
+                r.send(outputStream, false);
                 safeClose(outputStream);
             } finally {
                 tempFileManager.clear();
@@ -1149,6 +1165,9 @@ public abstract class NanoHTTPD {
                 // NOTE: this now forces header names lowercase since they are
                 // case insensitive and vary by client.
                 if (st.hasMoreTokens()) {
+                    String protocolVersion = st.nextToken();
+                    this.http11 = protocolVersion.equals("HTTP/1.1");
+
                     String line = in.readLine();
                     while (line != null && line.trim().length() > 0) {
                         int p = line.indexOf(':');
