@@ -1,6 +1,4 @@
-package droute.v2;
-
-import droute.Response;
+package droute.legacy;
 
 public interface Handler {
 	Response handle(Request request);

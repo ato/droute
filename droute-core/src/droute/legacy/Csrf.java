@@ -1,6 +1,6 @@
-package droute;
+package droute.legacy;
 
-import static droute.Response.response;
+import static droute.legacy.Response.response;
 
 public class Csrf {
 	/**
@@ -41,14 +41,14 @@ public class Csrf {
 			if (!request.method().equals("GET") &&
 					!request.method().equals("HEAD")) {
 				if (cookieToken == null) {
-					return response(400, "The cross-site request forgery protection cookie (" + cookieName + ") is missing or invalid.  Ensure your browser has cookies enabled and refresh the form.");
+					return Response.response(400, "The cross-site request forgery protection cookie (" + cookieName + ") is missing or invalid.  Ensure your browser has cachedCookies enabled and refresh the form.");
 				}
 				String formToken = request.header("X-Csrf-Token");
 				if (formToken == null) {
 					formToken = request.formParam(formParam);
 				}
 				if (!state.isTokenValid(formToken)) {
-					return response(400, "The cross-site request forgery protection form parameter (" + formParam + ") is missing or invalid.");
+					return Response.response(400, "The cross-site request forgery protection form parameter (" + formParam + ") is missing or invalid.");
 				}
 			}
 			Response response = handler.handle(request);

@@ -1,6 +1,6 @@
-package droute;
+package droute.legacy;
 
-import droute.v2.MultiMap;
+import droute.v2.OldMultiMap;
 
 import java.net.URI;
 import java.util.Map;
@@ -39,13 +39,13 @@ public interface Request {
 	/**
 	 * A combined map of all URL, query and form parameters.
 	 */
-	MultiMap params();
+	OldMultiMap params();
 
-	MultiMap urlParams();
+	OldMultiMap urlParams();
 
-	MultiMap queryParams();
+	OldMultiMap queryParams();
 
-	MultiMap formParams();
+	OldMultiMap formParams();
 	
 	String postBody();
 

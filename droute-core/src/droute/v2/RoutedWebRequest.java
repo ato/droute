@@ -1,16 +1,16 @@
 package droute.v2;
 
-public interface RoutedRequest extends Request {
+public interface RoutedWebRequest extends WebRequest {
 
     /**
      * Returns the original request object.
      */
-    Request unwrap();
+    WebRequest unwrap();
 
     /**
      * Returns a map of parameters extracted from the URI during routing.
      */
-    MultiMap params();
+    MultiMap<String,String> params();
 
     /**
      * Returns the first matching URL parameter.

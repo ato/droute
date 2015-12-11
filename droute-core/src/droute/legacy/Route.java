@@ -1,6 +1,6 @@
-package droute;
+package droute.legacy;
 
-import static droute.Response.resource;
+import static droute.legacy.Response.resource;
 
 import java.io.IOException;
 import java.net.URL;

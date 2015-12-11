@@ -1,6 +1,6 @@
-package droute;
+package droute.legacy;
 
-import droute.v2.MultiMap;
+import droute.v2.OldMultiMap;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -9,10 +9,10 @@ import java.util.Map;
 public class RequestBuilder  {
     final String method;
     final URI contextUri, uri;
-    final MultiMap params = new MultiMap();
-    final MultiMap queryParams = new MultiMap();
-    final MultiMap formParams = new MultiMap();
-    final MultiMap urlParams = new MultiMap();
+    final OldMultiMap params = new OldMultiMap();
+    final OldMultiMap queryParams = new OldMultiMap();
+    final OldMultiMap formParams = new OldMultiMap();
+    final OldMultiMap urlParams = new OldMultiMap();
     Headers headers = Headers.EMPTY;
     final Map stateMap = new HashMap<>();
 
@@ -84,22 +84,22 @@ public class RequestBuilder  {
             }
 
             @Override
-            public MultiMap params() {
+            public OldMultiMap params() {
                 return params;
             }
 
             @Override
-            public MultiMap urlParams() {
+            public OldMultiMap urlParams() {
                 return urlParams;
             }
 
             @Override
-            public MultiMap queryParams() {
+            public OldMultiMap queryParams() {
                 return queryParams;
             }
 
             @Override
-            public MultiMap formParams() {
+            public OldMultiMap formParams() {
                 return formParams;
             }
 

@@ -1,6 +1,6 @@
-package droute;
+package droute.legacy;
 
-import static droute.Response.response;
+import static droute.legacy.Response.response;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -12,7 +12,7 @@ public class DevMode {
 				return handler.handle(request);
 			} catch (Throwable t) {
 				t.printStackTrace();
-				return response(500, renderError(t));
+				return Response.response(500, renderError(t));
 			}
 		};
 	}

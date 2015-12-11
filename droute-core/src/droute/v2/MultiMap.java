@@ -1,38 +1,22 @@
 package droute.v2;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-public class MultiMap extends HashMap<String, List<String>> {
+public interface MultiMap<K, V> {
 
-    public void put(String key, String value) {
-        List<String> list = get(key);
-        if (list == null) {
-            list = new ArrayList<>();
-            put (key, list);
-        }
-        list.add(value);
-    }
+    List<V> get(K key);
 
-    @Override
-    public void putAll(Map<? extends String, ? extends List<String>> m) {
-        for (Entry<? extends String, ? extends List<String>> entry : m.entrySet()) {
-            List<String> list = get(entry.getKey());
-            if (list != null) {
-                list.addAll(entry.getValue());
-            } else {
-                put(entry.getKey(), new ArrayList<String>(entry.getValue()));
-            }
-        }
-    }
+    V getFirst(K key);
 
-    public String getFirst(String key) {
-        List<String> list = get(key);
-        if (list != null && !list.isEmpty()) {
-            return list.get(0);
-        }
-        return null;
-    }
+    void put(K key, V value);
+
+    Map<K, List<V>> asMap();
+
+    int size();
+
+    void replaceValues(V key, Collection<V> values);
+
+    Iterable<Map.Entry<String,String>> entries();
 }

@@ -4,11 +4,11 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URI;
 
-public class RoutedRequestImpl implements RoutedRequest {
-    final Request request;
-    final MultiMap params;
+class RoutedWebRequestImpl implements RoutedWebRequest {
+    final WebRequest request;
+    final MultiMap<String,String> params;
 
-    RoutedRequestImpl(Request request, MultiMap params) {
+    RoutedWebRequestImpl(WebRequest request, MultiMap<String,String> params) {
         this.request = request;
         this.params = params;
     }
@@ -22,28 +22,18 @@ public class RoutedRequestImpl implements RoutedRequest {
     }
 
     @Override
-    public Request unwrap() {
+    public WebRequest unwrap() {
         return request;
     }
 
     @Override
-    public MultiMap params() {
+    public MultiMap<String,String> params() {
         return params;
     }
 
     /*
      * Delegated methods
      */
-
-    @Override
-    public Object raw() {
-        return request.raw();
-    }
-
-    @Override
-    public Object rawResponse() {
-        return request.rawResponse();
-    }
 
     @Override
     public String method() {
@@ -56,7 +46,7 @@ public class RoutedRequestImpl implements RoutedRequest {
     }
 
     @Override
-    public MultiMap headers() {
+    public MultiMap<String,String> headers() {
         return request.headers();
     }
 
@@ -66,7 +56,7 @@ public class RoutedRequestImpl implements RoutedRequest {
     }
 
     @Override
-    public MultiMap queryMap() {
+    public MultiMap<String,String> queryMap() {
         return request.queryMap();
     }
 
@@ -106,12 +96,12 @@ public class RoutedRequestImpl implements RoutedRequest {
     }
 
     @Override
-    public MultiMap formMap() {
+    public MultiMap<String,String> formMap() {
         return request.formMap();
     }
 
     @Override
-    public MultiMap cookies() {
+    public MultiMap<String,String> cookies() {
         return request.cookies();
     }
 

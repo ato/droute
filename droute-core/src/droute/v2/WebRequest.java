@@ -5,19 +5,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public interface Request {
-
-    /**
-     * The original request object from the underlying web server or web framework.
-     * When using the Java Servlet Framework this is a HttpServletRequest.
-     */
-    Object raw();
-
-    /**
-     * The original response object from the underlying web server or web framework.
-     * When using the Java Servlet Framework this is a HttpServletResponse.
-     */
-    Object rawResponse();
+public interface WebRequest {
 
     /**
      * The HTTP request method such as "GET" or "POST".
@@ -27,17 +15,17 @@ public interface Request {
     /**
      * The HTTP request headers.
      */
-    MultiMap headers();
+    MultiMap<String, String> headers();
 
     /**
      * Returns a map of the decoded query string parameters.
      */
-    MultiMap queryMap();
+    MultiMap<String, String> queryMap();
 
     /**
      * Returns the HTTP body as an InputStream.
      */
-    InputStream bodyStream();
+    InputStream bodyStream() throws IOException;
 
     /**
      * Returns the protocol scheme ("http" or "https").
@@ -71,7 +59,7 @@ public interface Request {
 
     /**
      * The path of this request relative to the context root (excluding the query string).
-     *
+     * <p/>
      * For example if the application is mounted at /bakery and /bakery/scones/lemonade was requested, this returns
      * "/scones/lemonade".
      */
@@ -99,7 +87,7 @@ public interface Request {
 
     /**
      * The root URI of the web application.
-     *
+     * <p/>
      * Note that web applications may be accesible via multiple hostnames or
      * protocols. This will return the root URI appropriate to this request.
      */
@@ -114,7 +102,7 @@ public interface Request {
     /**
      * Interpret the request body as form data. This will consume the body stream.
      */
-    default MultiMap formMap() {
+    default MultiMap<String, String> formMap() {
         String contentType = header("Content-Type");
         if ("application/x-www-form-urlencoded".equals(contentType)) {
             try {
@@ -129,7 +117,7 @@ public interface Request {
     /**
      * Returns the parsed contents of the Cookie header.
      */
-    default MultiMap cookies() {
+    default MultiMap<String, String> cookies() {
         return RequestImpl.parseCookieHeader(header("Cookie"));
     }
 

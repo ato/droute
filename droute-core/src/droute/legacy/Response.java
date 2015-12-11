@@ -1,4 +1,6 @@
-package droute;
+package droute.legacy;
+
+import droute.v2.ContentTypes;
 
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 

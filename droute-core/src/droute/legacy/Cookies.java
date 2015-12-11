@@ -1,4 +1,4 @@
-package droute;
+package droute.legacy;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
