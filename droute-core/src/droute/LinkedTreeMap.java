@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package droute.v2;
+package droute;
 
 import java.io.ObjectStreamException;
 import java.io.Serializable;
@@ -154,7 +154,7 @@ final class LinkedTreeMap<K, V> extends AbstractMap<K, V> implements Serializabl
             return null;
         }
 
-        // Create the node and add it to the tree or the table.
+        // Create the node and on it to the tree or the table.
         Node<K, V> header = this.header;
         Node<K, V> created;
         if (nearest == null) {

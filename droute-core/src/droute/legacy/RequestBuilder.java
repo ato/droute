@@ -53,7 +53,7 @@ public class RequestBuilder  {
     }
 
     public static RequestBuilder get(String path) {
-        return new RequestBuilder("GET", path);
+        return new RequestBuilder("onGET", path);
     }
 
     public Request build() {

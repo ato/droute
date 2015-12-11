@@ -27,7 +27,7 @@ public class Csrf {
 	
 	/**
 	 * Middleware which provides "Double Submit Cookie" Cross Site Request. All
-	 * non GET or HEAD requests will be denied unless they contain the same CSRF
+	 * non onGET or HEAD requests will be denied unless they contain the same CSRF
 	 * token in a cookie and form parameter.
 	 */
 	public static Handler protect(Handler handler, String cookieName, String formParam) {
@@ -38,7 +38,7 @@ public class Csrf {
 			}
 			Csrf state = new Csrf(cookieToken);
 			request.setState(state);
-			if (!request.method().equals("GET") &&
+			if (!request.method().equals("onGET") &&
 					!request.method().equals("HEAD")) {
 				if (cookieToken == null) {
 					return Response.response(400, "The cross-site request forgery protection cookie (" + cookieName + ") is missing or invalid.  Ensure your browser has cachedCookies enabled and refresh the form.");

@@ -1,4 +1,4 @@
-package droute.v2;
+package droute;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,16 +8,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-class WebRoute implements WebHandler {
+class Route implements WebHandler {
     private final static Pattern KEY_PATTERN = Pattern.compile(":([a-z_][a-zA-Z0-9_]*)|\\*");
 
     private final String method;
-    private final WebRouteHandler handler;
+    private final WebHandler handler;
     private final String pattern;
     private final Pattern re;
     private final List<String> keys = new ArrayList<>();
 
-    WebRoute(String method, String pattern, WebRouteHandler handler, String... paramsAndRegexs) {
+    Route(String method, String pattern, WebHandler handler, String... paramsAndRegexs) {
         this.method = method;
         this.handler = handler;
         this.pattern = pattern;
@@ -30,11 +30,16 @@ class WebRoute implements WebHandler {
             Matcher m = re.matcher(request.path());
             if (m.matches()) {
                 MultiMap<String,String> params = new LinkedTreeMultiMap<>();
+
                 for (int i = 0; i < m.groupCount(); i++) {
                     String key = keys.get(i);
                     params.put(key, m.group(i + 1));
                 }
-                return handler.handle(new RoutedWebRequestImpl(request, params));
+                try {
+                    return handler.handle(request);
+                } finally {
+
+                }
             }
         }
         return WebResponses.NEXT_HANDLER;

@@ -1,4 +1,4 @@
-package droute.v2;
+package droute;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

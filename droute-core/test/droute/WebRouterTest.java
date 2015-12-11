@@ -14,7 +14,7 @@ import droute.legacy.Response;
 import droute.v2.OldMultiMap;
 import org.junit.Test;
 
-public class TestRoute {
+public class WebRouterTest {
 
 	@Test
 	public void multipleUrlParamsShouldWork() {
@@ -43,7 +43,7 @@ public class TestRoute {
 		
 		@Override
 		public String method() {
-			return "GET";
+			return "onGET";
 		}
 
 		@Override

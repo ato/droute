@@ -79,7 +79,7 @@ public interface Response {
 
 	/**
 	 * Returns a 303 See Other response. Even if the initial request was a POST the browser will fetch
-	 * the redirect location using GET.
+	 * the redirect location using onGET.
 	 */
 	public static Response seeOther(String url) {
 		return redirect(303, url);

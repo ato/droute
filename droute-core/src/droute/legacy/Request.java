@@ -14,7 +14,7 @@ public interface Request {
 	Object raw();
 
 	/**
-	 * The HTTP request method such as "GET" or "POST".
+	 * The HTTP request method such as "onGET" or "POST".
 	 */
 	String method();
 

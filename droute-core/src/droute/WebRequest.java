@@ -1,4 +1,4 @@
-package droute.v2;
+package droute;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -8,7 +8,7 @@ import java.net.URISyntaxException;
 public interface WebRequest {
 
     /**
-     * The HTTP request method such as "GET" or "POST".
+     * The HTTP request method such as "onGET" or "POST".
      */
     String method();
 
@@ -21,6 +21,11 @@ public interface WebRequest {
      * Returns a map of the decoded query string parameters.
      */
     MultiMap<String, String> queryMap();
+
+    /**
+     * Returns a map of parameters extracted from the URI during routing.
+     */
+    MultiMap<String,String> params();
 
     /**
      * Returns the HTTP body as an InputStream.
@@ -149,4 +154,10 @@ public interface WebRequest {
         return cookies().getFirst(name);
     }
 
+    /**
+     * Returns the first matching URL parameter.
+     */
+    default String param(String key) {
+        return params().getFirst(key);
+    }
 }

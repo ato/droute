@@ -1,4 +1,4 @@
-package droute.v2;
+package droute;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,6 +13,13 @@ import java.util.Objects;
 
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 
+/**
+ * Factory methods for constructing WebResponse instances.
+ *
+ * The methods in this class are intended to be statically imported:
+ *
+ * {@code import static droute.WebResponses.*}
+ */
 public final class WebResponses {
     private static final Map<String,String> contentTypes = new HashMap<String,String>();
 
@@ -28,7 +35,7 @@ public final class WebResponses {
         contentTypes.put("eot", "application/vnd.ms-fontobject");
     }
 
-    public static String fromExtension(String filename) {
+    private static String guessContentType(String filename) {
         int i = filename.lastIndexOf('.') + 1;
         if (i >= 0) {
             String ext = filename.substring(i);
@@ -96,7 +103,7 @@ public final class WebResponses {
 
     /**
      * Returns a 303 See Other response. Even if the initial request was a POST the browser will fetch
-     * the redirect location using GET.
+     * the redirect location using onGET.
      */
     public static WebResponse seeOther(String location) {
         return redirect(303, location);
@@ -136,7 +143,7 @@ public final class WebResponses {
         URLConnection conn = resource.openConnection();
         long lastModified = conn.getLastModified();
         long length = conn.getContentLengthLong();
-        String type = ContentTypes.fromExtension(resource.getPath());
+        String type = guessContentType(resource.getPath());
 
         WebResponse response = ok(conn.getInputStream());
         if (lastModified != 0) {

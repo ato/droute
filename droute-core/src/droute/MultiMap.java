@@ -1,4 +1,4 @@
-package droute.v2;
+package droute;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,7 +16,7 @@ public interface MultiMap<K, V> {
 
     int size();
 
-    void replaceValues(V key, Collection<V> values);
+    List<V> replaceValues(K key, Collection<V> values);
 
-    Iterable<Map.Entry<String,String>> entries();
+    Iterable<Map.Entry<K,V>> entries();
 }

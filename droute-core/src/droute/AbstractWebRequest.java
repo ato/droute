@@ -1,4 +1,4 @@
-package droute.v2;
+package droute;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,6 +17,12 @@ abstract class AbstractWebRequest implements WebRequest {
     protected MultiMap<String,String> cachedFormMap = null;
     protected MultiMap<String,String> cachedQueryMap = null;
     protected MultiMap<String,String> cachedCookies = null;
+    protected MultiMap<String,String> params = new LinkedTreeMultiMap<>();
+
+    @Override
+    public MultiMap<String, String> params() {
+        return params;
+    }
 
     static String determineHost(WebRequest request) {
         String host = request.header("Host");
