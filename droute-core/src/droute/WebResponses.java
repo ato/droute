@@ -24,6 +24,7 @@ public final class WebResponses {
     private static final Map<String,String> contentTypes = new HashMap<String,String>();
 
     static {
+        contentTypes.put("txt", "text/plain");
         contentTypes.put("css", "text/css");
         contentTypes.put("js", "application/javascript");
         contentTypes.put("png", "image/png");
@@ -54,7 +55,7 @@ public final class WebResponses {
 	 * Convenience constructors
 	 */
 
-    public static WebResponse response(int status, WebResponseBody body) {
+    public static WebResponse response(int status, WebPayload body) {
         WebResponse response = new WebResponse();
         response.setStatus(status);
         response.setBody(body);
@@ -62,11 +63,11 @@ public final class WebResponses {
     }
 
     public static WebResponse response(int status, InputStream body) {
-        return response(status, WebResponseBody.wrap(body));
+        return response(status, WebPayload.wrap(body));
     }
 
     public static WebResponse response(int status, String body) {
-        return response(status, WebResponseBody.wrap(body));
+        return response(status, WebPayload.wrap(body));
     }
 
     public static WebResponse ok(InputStream body) {

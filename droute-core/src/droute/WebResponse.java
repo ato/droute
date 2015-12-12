@@ -1,19 +1,18 @@
 package droute;
 
 import java.util.Arrays;
-import java.util.Map;
 
 public final class WebResponse {
     private int status = 200;
-    private WebResponseBody body;
+    private WebPayload body;
     private final MultiMap<String,String> headers = new LinkedTreeMultiMap<>(String.CASE_INSENSITIVE_ORDER);
 
     public int status() {
         return status;
     }
 
-    public Iterable<Map.Entry<String,String>> headers() {
-        return headers.entries();
+    public MultiMap<String,String> headers() {
+        return headers;
     }
 
     public void addHeader(String key, String value) {
@@ -28,11 +27,11 @@ public final class WebResponse {
         this.status = status;
     }
 
-    public void setBody(WebResponseBody body) {
+    public void setBody(WebPayload body) {
         this.body = body;
     }
 
-    public WebResponseBody body() {
+    public WebPayload body() {
         return body;
     }
 

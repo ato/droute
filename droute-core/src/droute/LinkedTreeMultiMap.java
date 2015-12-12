@@ -21,7 +21,7 @@ class LinkedTreeMultiMap<K,V> implements MultiMap<K,V> {
 
     public V getFirst(K key) {
         List<V> values = get(key);
-        return values.isEmpty() ? null : values.get(0);
+        return values == null || values.isEmpty() ? null : values.get(0);
     }
 
     @Override

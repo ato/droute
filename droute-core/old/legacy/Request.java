@@ -1,7 +1,5 @@
 package droute.legacy;
 
-import droute.v2.OldMultiMap;
-
 import java.net.URI;
 import java.util.Map;
 

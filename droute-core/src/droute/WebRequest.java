@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 public interface WebRequest {
 
@@ -20,7 +21,13 @@ public interface WebRequest {
     /**
      * Returns a map of the decoded query string parameters.
      */
-    MultiMap<String, String> queryMap();
+    default MultiMap<String, String> queryMap() {
+        try {
+            return RequestImpl.parseFormData(new ByteArrayInputStream(queryString().getBytes(StandardCharsets.US_ASCII)));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * Returns a map of parameters extracted from the URI during routing.
@@ -160,4 +167,9 @@ public interface WebRequest {
     default String param(String key) {
         return params().getFirst(key);
     }
+
+    /**
+     * Replaces the URL parameter multimap.
+     */
+    void setParams(MultiMap<String, String> params);
 }

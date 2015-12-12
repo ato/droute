@@ -15,6 +15,11 @@
                 <directory>${basedir}/resources</directory>
             </resource>
         </resources>
+        <testResources>
+            <testResource>
+                <directory>${basedir}/test-resources</directory>
+            </testResource>
+        </testResources>
     </build>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

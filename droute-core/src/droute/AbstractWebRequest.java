@@ -68,6 +68,7 @@ abstract class AbstractWebRequest implements WebRequest {
                 }
 
                 buf.reset();
+                key = null;
 
                 if (b == -1) {
                     break;
@@ -84,7 +85,10 @@ abstract class AbstractWebRequest implements WebRequest {
 
     @Override
     public MultiMap<String,String> queryMap() {
-        throw new UnsupportedOperationException("TODO");
+        if (cachedQueryMap == null) {
+            cachedQueryMap = WebRequest.super.queryMap();
+        }
+        return cachedQueryMap;
     }
 
     @Override
@@ -101,5 +105,10 @@ abstract class AbstractWebRequest implements WebRequest {
             cachedCookies = WebRequest.super.cookies();
         }
         return cachedCookies;
+    }
+
+    @Override
+    public void setParams(MultiMap<String, String> params) {
+        this.params = params;
     }
 }
