@@ -3,6 +3,7 @@ package droute;
 import java.io.IOException;
 
 public interface WebHandler extends AutoCloseable {
+
     WebResponse handle(WebRequest request) throws IOException;
 
     /**

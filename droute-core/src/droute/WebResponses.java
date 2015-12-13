@@ -19,9 +19,6 @@ import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
  * {@code import static droute.WebResponses.*}
  */
 public final class WebResponses {
-    /*
-     * Status codes
-     */
     public final static int CONTINUE = 100;
     public final static int SWITCHING_PROTOCOLS = 101;
     public final static int OK = 200;
