@@ -1,13 +1,14 @@
 package droute;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import droute.legacy.Handler;
+import droute.legacy.Request;
+import droute.legacy.Response;
 import org.meshy.jshotgun.Shotgun;
 
 public class ShotgunHandler implements Handler {

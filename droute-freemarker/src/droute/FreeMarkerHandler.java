@@ -8,6 +8,10 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Map;
 
+import droute.legacy.Handler;
+import droute.legacy.Request;
+import droute.legacy.Response;
+import droute.legacy.Streamable;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;

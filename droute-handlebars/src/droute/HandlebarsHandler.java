@@ -4,10 +4,10 @@ import java.io.IOException;
 
 import com.github.jknack.handlebars.Handlebars;
 
-import droute.Handler;
+import droute.legacy.Handler;
 import droute.ModelAndView;
-import droute.Request;
-import droute.Response;
+import droute.legacy.Request;
+import droute.legacy.Response;
 
 public class HandlebarsHandler implements Handler {
 	

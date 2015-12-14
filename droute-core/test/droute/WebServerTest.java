@@ -11,7 +11,7 @@ public class WebServerTest {
 
     @Test
     public void testParser() {
-        WebServer.Parser parser = new WebServer.Parser();
+        HttpRequestParser parser = new HttpRequestParser();
         String text = "GET /hello/world?1=2 HTTP/1.0\r\nHost: localhost:80\r\nBanana:fruit\r\nBANANA: vegetable\r\n\r\n";
         byte[] data = text.getBytes(US_ASCII);
 
@@ -40,7 +40,7 @@ public class WebServerTest {
                 "GET /\r\nall cookies:mine\r\n\r\n",
                 "GET /\r\nnull:null=\0null\r\n\r\n",
         };
-        WebServer.Parser parser = new WebServer.Parser();
+        HttpRequestParser parser = new HttpRequestParser();
         for (String testString : testStrings) {
             byte[] data = testString.getBytes(US_ASCII);
 
