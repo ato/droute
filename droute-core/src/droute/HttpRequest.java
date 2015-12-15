@@ -1,31 +1,27 @@
 package droute;
 
 import java.io.InputStream;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
-class RequestImpl extends AbstractWebRequest {
+class HttpRequest extends AbstractWebRequest {
 
     private final String method;
     private final String path;
     private final String queryString;
     private final String scheme;
-    private final InetAddress remoteAddress;
-    private final int remotePort;
-    private final InetAddress localAddress;
-    private final int localPort;
+    private final InetSocketAddress remoteAddress;
+    private final InetSocketAddress localAddress;
     private final String contextPath;
     private final MultiMap<String,String> headers;
     private final InputStream bodyStream;
 
-    public RequestImpl(String method, String path, String queryString, String scheme, InetAddress remoteAddress, int remotePort, InetAddress localAddress, int localPort, String contextPath, MultiMap<String,String> headers, InputStream bodyStream) {
+    public HttpRequest(String method, String path, String queryString, String scheme, InetSocketAddress remoteAddress, InetSocketAddress localAddress, String contextPath, MultiMap<String,String> headers, InputStream bodyStream) {
         this.method = method;
         this.path = path;
         this.queryString = queryString;
         this.scheme = scheme;
         this.remoteAddress = remoteAddress;
-        this.remotePort = remotePort;
         this.localAddress = localAddress;
-        this.localPort = localPort;
         this.contextPath = contextPath;
         this.headers = headers;
         this.bodyStream = bodyStream;
@@ -52,23 +48,13 @@ class RequestImpl extends AbstractWebRequest {
     }
 
     @Override
-    public InetAddress localAddress() {
+    public InetSocketAddress localAddress() {
         return localAddress;
     }
 
     @Override
-    public int localPort() {
-        return localPort;
-    }
-
-    @Override
-    public InetAddress remoteAddress() {
+    public InetSocketAddress remoteAddress() {
         return remoteAddress;
-    }
-
-    @Override
-    public int remotePort() {
-        return remotePort;
     }
 
     @Override
@@ -94,9 +80,7 @@ class RequestImpl extends AbstractWebRequest {
                 ", queryString='" + queryString + '\'' +
                 ", scheme='" + scheme + '\'' +
                 ", remoteAddress=" + remoteAddress +
-                ", remotePort=" + remotePort +
                 ", localAddress=" + localAddress +
-                ", localPort=" + localPort +
                 ", contextPath='" + contextPath + '\'' +
                 ", headers=" + headers +
                 ", bodyStream=" + bodyStream +

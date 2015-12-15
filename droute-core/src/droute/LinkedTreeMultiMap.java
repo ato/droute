@@ -102,4 +102,26 @@ class LinkedTreeMultiMap<K,V> implements MultiMap<K,V> {
             }
         };
     }
+
+    @Override
+    public boolean containsKey(K key) {
+        List<V> values = get(key);
+        return values != null && !values.isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder out = new StringBuilder();
+        out.append("{");
+        for (Map.Entry<K, V> entry : entries()) {
+            if (out.length() > 1) {
+                out.append(", ");
+            }
+            out.append(entry.getKey());
+            out.append("=");
+            out.append(entry.getValue());
+        }
+        out.append("}");
+        return out.toString();
+    }
 }

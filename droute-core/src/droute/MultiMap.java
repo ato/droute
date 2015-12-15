@@ -19,4 +19,6 @@ public interface MultiMap<K, V> {
     List<V> replaceValues(K key, Collection<V> values);
 
     Iterable<Map.Entry<K,V>> entries();
+
+    boolean containsKey(K key);
 }

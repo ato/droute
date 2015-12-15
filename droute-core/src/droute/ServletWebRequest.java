@@ -5,6 +5,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
@@ -64,31 +65,13 @@ public class ServletWebRequest extends AbstractWebRequest {
     }
 
     @Override
-    public InetAddress localAddress() {
-        try {
-            return InetAddress.getByName(servletRequest.getLocalAddr());
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
+    public InetSocketAddress localAddress() {
+        return InetSocketAddress.createUnresolved(servletRequest.getLocalAddr(), servletRequest.getLocalPort());
     }
 
     @Override
-    public int localPort() {
-        return servletRequest.getLocalPort();
-    }
-
-    @Override
-    public InetAddress remoteAddress() {
-        try {
-            return InetAddress.getByName(servletRequest.getRemoteAddr());
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public int remotePort() {
-        return servletRequest.getRemotePort();
+    public InetSocketAddress remoteAddress() {
+        return InetSocketAddress.createUnresolved(servletRequest.getRemoteAddr(), servletRequest.getRemotePort());
     }
 
     @Override

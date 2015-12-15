@@ -163,7 +163,16 @@ public final class WebResponses {
         return response;
     }
 
-    private static String formatHttpDate(long epochMillis) {
+    /**
+     * Halts processing immediately and returns the given response.
+     *
+     * Throws a WebResponseException to unwind back to the web server.
+     */
+    public static void halt(WebResponse response) {
+        throw new WebResponseException(response);
+    }
+
+    static String formatHttpDate(long epochMillis) {
         return RFC_1123_DATE_TIME.format(OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneOffset.UTC));
     }
 }

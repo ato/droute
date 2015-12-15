@@ -7,6 +7,15 @@ public final class WebResponse {
     private WebPayload body;
     private final MultiMap<String,String> headers = new LinkedTreeMultiMap<>(String.CASE_INSENSITIVE_ORDER);
 
+    @Override
+    public String toString() {
+        return "WebResponse{" +
+                "status=" + status +
+                ", body=" + body +
+                ", headers=" + headers +
+                '}';
+    }
+
     public int status() {
         return status;
     }

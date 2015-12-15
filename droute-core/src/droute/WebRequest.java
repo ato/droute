@@ -1,9 +1,7 @@
 package droute;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 
 public interface WebRequest {
@@ -23,7 +21,7 @@ public interface WebRequest {
      */
     default MultiMap<String, String> queryMap() {
         try {
-            return RequestImpl.parseFormData(new ByteArrayInputStream(queryString().getBytes(StandardCharsets.US_ASCII)));
+            return HttpRequest.parseFormData(new ByteArrayInputStream(queryString().getBytes(StandardCharsets.US_ASCII)));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -47,22 +45,12 @@ public interface WebRequest {
     /**
      * The local address the client is connected to.
      */
-    InetAddress localAddress();
-
-    /**
-     * The local port number the client is connected to.
-     */
-    int localPort();
+    InetSocketAddress localAddress();
 
     /**
      * The address of the remote client.
      */
-    InetAddress remoteAddress();
-
-    /**
-     * The port number of the remote client.
-     */
-    int remotePort();
+    InetSocketAddress remoteAddress();
 
     /**
      * The raw query string.
@@ -91,7 +79,7 @@ public interface WebRequest {
      */
     default URI uri() {
         try {
-            return new URI(scheme(), null, RequestImpl.determineHost(this), localPort(), path(), queryString(), null);
+            return new URI(scheme(), null, HttpRequest.determineHost(this), localAddress().getPort(), path(), queryString(), null);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -105,7 +93,7 @@ public interface WebRequest {
      */
     default URI contextUri() {
         try {
-            return new URI(scheme(), null, RequestImpl.determineHost(this), localPort(), contextPath(), null, null);
+            return new URI(scheme(), null, HttpRequest.determineHost(this), localAddress().getPort(), contextPath(), null, null);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -118,7 +106,7 @@ public interface WebRequest {
         String contentType = header("Content-Type");
         if ("application/x-www-form-urlencoded".equals(contentType)) {
             try {
-                return RequestImpl.parseFormData(bodyStream());
+                return HttpRequest.parseFormData(bodyStream());
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
@@ -130,7 +118,7 @@ public interface WebRequest {
      * Returns the parsed contents of the Cookie header.
      */
     default MultiMap<String, String> cookies() {
-        return RequestImpl.parseCookieHeader(header("Cookie"));
+        return HttpRequest.parseCookieHeader(header("Cookie"));
     }
 
     /**

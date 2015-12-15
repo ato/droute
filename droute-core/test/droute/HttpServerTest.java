@@ -2,12 +2,17 @@ package droute;
 
 import org.junit.Test;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.Arrays;
 
+import static droute.WebResponses.ok;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.*;
 
-public class WebServerTest {
+public class HttpServerTest {
 
     @Test
     public void testParser() {
@@ -48,6 +53,22 @@ public class WebServerTest {
             parser.parse(data, 0, data.length);
 
             assertTrue(parser.isError());
+        }
+    }
+
+    @Test
+    public void testInteroperability() throws IOException, InterruptedException {
+        WebHandler handler = req -> {
+            assertEquals("/hello", req.path());
+            return ok("OK");
+        };
+        try (HttpServer server = new HttpServer(handler, "localhost", 0)) {
+            new Thread(server).start();
+
+            URL url = new URL("http", server.localAddress().getHostString(), server.localAddress().getPort(), "/hello");
+            try (BufferedReader rdr = new BufferedReader(new InputStreamReader(url.openStream()))) {
+                assertEquals("OK", rdr.readLine());
+            }
         }
     }
 

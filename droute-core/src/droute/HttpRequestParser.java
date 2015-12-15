@@ -1,10 +1,23 @@
 package droute;
 
+/**
+ * Parses HTTP requests
+ * <p/>
+ * Usage: repeatedly feed data to parse() until isError() or isFinished() are true. Call reset() before starting
+ * the next request.
+ * <p/>
+ * This parser deviates from RFC7230 in the following ways:
+ * <ul>
+ *     <li>requests using the deprecated header line folding are rejected</li>
+ *     <li>the HTTP version number is optional and not validated by the parser</li>
+ *     <li>target URI validity is not enforced beyond checking the allowed characters</li>
+ * </ul>
+ */
 class HttpRequestParser {
     private static final byte[] SYMBOLS = buildSymbolTable();
     private static final byte[] TRANSITIONS = {
             /* v   tok   url   com   ':'   ' '   '\r' '\n'  non-printable */
-            0x7e, 0x10, 0x7e, 0x10, 0x7e, 0x21, 0x7e, 0x7e, 0x7e, /* state 0: method */
+            0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, /* state 0: start of method */
             0x7e, 0x7e, 0x11, 0x11, 0x11, 0x32, 0x33, 0x7e, 0x7e, /* state 1: request-target */
             0x7e, 0x7e, 0x12, 0x12, 0x12, 0x7e, 0x43, 0x7e, 0x7e, /* state 2: http-version */
             0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x04, 0x7e, /* state 3: request-line newline */
@@ -14,6 +27,7 @@ class HttpRequestParser {
             0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x68, 0x7e, 0x7e, /* state 7: field-value */
             0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x04, 0x7e, /* state 8: field newline */
             0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7f, 0x7e, /* state 9: final newline */
+            0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x21, 0x7e, 0x7e, 0x7e, /* state a: method */
             /*
              * entry form 0xAS: A - action, S - next state
              * final states: e - error, f - finished
@@ -30,6 +44,29 @@ class HttpRequestParser {
 
     HttpRequestParser() {
         reset();
+    }
+
+    private static byte[] buildSymbolTable() {
+        byte[] symbols = new byte[256];
+        fill(symbols, "^`|", 1); // token only
+        fill(symbols, "(),/:;=?@[]", 2); // url only
+        fill(symbols, "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~", 3); // common
+        for (int i = 0; i < 32; i++) {
+            symbols[i] = 8; // non-printable
+        }
+        symbols[127] = 8; // DEL (non-printable)
+        symbols[':'] = 4;
+        symbols[' '] = 5;
+        symbols['\r'] = 6;
+        symbols['\n'] = 7;
+        symbols['\t'] = 0; // tab is allowed in field values
+        return symbols;
+    }
+
+    private static void fill(byte[] array, String chars, int value) {
+        for (int i = 0; i < chars.length(); i++) {
+            array[chars.charAt(i)] = (byte) value;
+        }
     }
 
     public void reset() {
@@ -94,28 +131,5 @@ class HttpRequestParser {
 
     public boolean isFinished() {
         return state == 0xf;
-    }
-
-    private static byte[] buildSymbolTable() {
-        byte[] symbols = new byte[256];
-        fill(symbols, "^`|", 1); // token only
-        fill(symbols, "(),/:;=?@[]", 2); // url only
-        fill(symbols, "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~", 3); // common
-        for (int i = 0; i < 32; i++) {
-            symbols[i] = 8; // non-printable
-        }
-        symbols[127] = 8; // DEL (non-printable)
-        symbols[':'] = 4;
-        symbols[' '] = 5;
-        symbols['\r'] = 6;
-        symbols['\n'] = 7;
-        symbols['\t'] = 0; // tab is allowed in field values
-        return symbols;
-    }
-
-    private static void fill(byte[] array, String chars, int value) {
-        for (int i = 0; i < chars.length(); i++) {
-            array[chars.charAt(i)] = (byte) value;
-        }
     }
 }

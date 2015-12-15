@@ -111,7 +111,7 @@ public class WebRouterTest {
     private WebRequest request(String method, String uri) {
         URI parsed = URI.create(uri);
         MultiMap<String,String> headers = new LinkedTreeMultiMap<>(String.CASE_INSENSITIVE_ORDER);
-        return new RequestImpl(method, parsed.getPath(), parsed.getQuery(), "http", null, 0, null, 0, "/", headers, null);
+        return new HttpRequest(method, parsed.getPath(), parsed.getQuery(), "http", null, null, "/", headers, null);
     }
     private WebRequest GET(String uri) {
         return request("GET", uri);
