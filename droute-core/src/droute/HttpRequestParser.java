@@ -91,7 +91,8 @@ class HttpRequestParser {
 
     public int parse(byte[] data, int offset, int length) {
         int end = offset + length;
-        for (int i = 0; i < length; i++) {
+
+        for (int i = offset; i < end; i++) {
             int b = data[i] & 0xff;
             int symbol = SYMBOLS[b];
             int opcode = TRANSITIONS[state * SYMBOL_COUNT + symbol] & 0xFF;
@@ -132,7 +133,7 @@ class HttpRequestParser {
                     buffer.setLength(0);
                     break;
                 default:
-                    throw new IllegalStateException();
+                    throw new IllegalStateException("illegal parse action: " + action);
             }
 
             state = opcode & 0xf;

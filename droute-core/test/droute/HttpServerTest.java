@@ -23,7 +23,11 @@ public class HttpServerTest {
         assertFalse(parser.isError());
         assertFalse(parser.isFinished());
 
-        parser.parse(data, 0, data.length);
+        // split the parsing into parts to make sure we're handling that properly
+        parser.parse(data, 0, 7);
+        parser.parse(data, 7, 0);
+        parser.parse(data, 7, 1);
+        parser.parse(data, 8, data.length - 8);
 
         assertFalse(parser.isError());
         assertTrue(parser.isFinished());
