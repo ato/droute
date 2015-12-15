@@ -28,7 +28,8 @@ public class HttpServerTest {
         assertFalse(parser.isError());
         assertTrue(parser.isFinished());
         assertEquals(3, parser.fields.size());
-        assertEquals("/hello/world?1=2", parser.target);
+        assertEquals("/hello/world", parser.path);
+        assertEquals("1=2", parser.query);
         assertEquals("localhost:80", parser.fields.getFirst("Host"));
         assertEquals(Arrays.asList("fruit", "vegetable"), parser.fields.get("bAnAnA"));
         assertEquals("HTTP/1.0", parser.version);

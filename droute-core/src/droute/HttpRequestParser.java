@@ -14,20 +14,22 @@ package droute;
  * </ul>
  */
 class HttpRequestParser {
+    private static int SYMBOL_COUNT = 10;
     private static final byte[] SYMBOLS = buildSymbolTable();
     private static final byte[] TRANSITIONS = {
-            /* v   tok   url   com   ':'   ' '   '\r' '\n'  non-printable */
-            0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, /* state 0: start of method */
-            0x7e, 0x7e, 0x11, 0x11, 0x11, 0x32, 0x33, 0x7e, 0x7e, /* state 1: request-target */
-            0x7e, 0x7e, 0x12, 0x12, 0x12, 0x7e, 0x43, 0x7e, 0x7e, /* state 2: http-version */
-            0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x04, 0x7e, /* state 3: request-line newline */
-            0x7e, 0x15, 0x7e, 0x15, 0x7e, 0x7e, 0x09, 0x7e, 0x7e, /* state 4: start of field-name */
-            0x7e, 0x15, 0x7e, 0x15, 0x56, 0x7e, 0x7e, 0x7e, 0x7e, /* state 5: field-name */
-            0x17, 0x17, 0x17, 0x17, 0x17, 0x06, 0x68, 0x7e, 0x7e, /* state 6: field-value leading spaces */
-            0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x68, 0x7e, 0x7e, /* state 7: field-value */
-            0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x04, 0x7e, /* state 8: field newline */
-            0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7f, 0x7e, /* state 9: final newline */
-            0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x21, 0x7e, 0x7e, 0x7e, /* state a: method */
+            /* v   tok   url   com   ':'   ' '   '?'  '\r'  '\n'  non-printable */
+            0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, /* state 0: start of method */
+            0x7e, 0x7e, 0x11, 0x11, 0x11, 0x32, 0x3b, 0x33, 0x7e, 0x7e, /* state 1: request-path */
+            0x7e, 0x7e, 0x12, 0x12, 0x12, 0x7e, 0x7e, 0x43, 0x7e, 0x7e, /* state 2: http-version */
+            0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x04, 0x7e, /* state 3: request-line newline */
+            0x7e, 0x15, 0x7e, 0x15, 0x7e, 0x7e, 0x7e, 0x09, 0x7e, 0x7e, /* state 4: start of field-name */
+            0x7e, 0x15, 0x7e, 0x15, 0x56, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, /* state 5: field-name */
+            0x17, 0x17, 0x17, 0x17, 0x17, 0x06, 0x68, 0x68, 0x7e, 0x7e, /* state 6: field-value leading spaces */
+            0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x68, 0x68, 0x7e, 0x7e, /* state 7: field-value */
+            0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x04, 0x7e, /* state 8: field newline */
+            0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7f, 0x7e, /* state 9: final newline */
+            0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x21, 0x7e, 0x7e, 0x7e, 0x7e, /* state a: method */
+            0x7e, 0x7e, 0x1b, 0x1b, 0x1b, (byte)0x82, 0x1b, 0x33, 0x7e, 0x7e, /* state b: query-string */
             /*
              * entry form 0xAS: A - action, S - next state
              * final states: e - error, f - finished
@@ -37,7 +39,8 @@ class HttpRequestParser {
     int state;
     StringBuilder buffer;
     String method;
-    String target;
+    String path;
+    String query;
     String version;
     String fieldName;
     MultiMap<String, String> fields;
@@ -48,18 +51,24 @@ class HttpRequestParser {
 
     private static byte[] buildSymbolTable() {
         byte[] symbols = new byte[256];
-        fill(symbols, "^`|", 1); // token only
-        fill(symbols, "(),/:;=?@[]", 2); // url only
-        fill(symbols, "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~", 3); // common
+
         for (int i = 0; i < 32; i++) {
-            symbols[i] = 8; // non-printable
+            symbols[i] = 9; // non-printable
         }
-        symbols[127] = 8; // DEL (non-printable)
+        symbols[127] = 9; // DEL (non-printable)
+
+        symbols['\t'] = 0; // tab is allowed in field values
+
+        fill(symbols, "^`|", 1); // token only
+        fill(symbols, "(),/:;=@[]", 2); // url only
+        fill(symbols, "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~", 3); // common
+
         symbols[':'] = 4;
         symbols[' '] = 5;
-        symbols['\r'] = 6;
-        symbols['\n'] = 7;
-        symbols['\t'] = 0; // tab is allowed in field values
+        symbols['?'] = 6;
+        symbols['\r'] = 7;
+        symbols['\n'] = 8;
+
         return symbols;
     }
 
@@ -73,7 +82,8 @@ class HttpRequestParser {
         state = 0;
         buffer = new StringBuilder();
         method = null;
-        target = null;
+        path = null;
+        query = null;
         version = null;
         fieldName = null;
         fields = new LinkedTreeMultiMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -84,9 +94,10 @@ class HttpRequestParser {
         for (int i = 0; i < length; i++) {
             int b = data[i] & 0xff;
             int symbol = SYMBOLS[b];
-            int action = TRANSITIONS[state * 9 + symbol];
+            int opcode = TRANSITIONS[state * SYMBOL_COUNT + symbol] & 0xFF;
+            int action = opcode >> 4;
 
-            switch (action >> 4) {
+            switch (action) {
                 case 0: // no action
                     break;
                 case 1: // push current byte
@@ -96,8 +107,8 @@ class HttpRequestParser {
                     method = buffer.toString();
                     buffer.setLength(0);
                     break;
-                case 3: // end of request-target
-                    target = buffer.toString();
+                case 3: // end of request path
+                    path = buffer.toString();
                     buffer.setLength(0);
                     break;
                 case 4: // end of http-version
@@ -114,13 +125,17 @@ class HttpRequestParser {
                     buffer.setLength(0);
                     break;
                 case 7: // halt parsing
-                    state = action & 0xf;
+                    state = opcode & 0xf;
                     return i - offset;
+                case 8: // end of query string
+                    query = buffer.toString();
+                    buffer.setLength(0);
+                    break;
                 default:
                     throw new IllegalStateException();
             }
 
-            state = action & 0xf;
+            state = opcode & 0xf;
         }
         return length;
     }

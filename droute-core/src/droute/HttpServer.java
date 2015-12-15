@@ -168,20 +168,10 @@ public final class HttpServer implements Runnable, Closeable {
             String contentLengthField = parser.fields.getFirst("Content-Length");
             long contentLength = contentLengthField == null ? 0 : Long.parseLong(contentLengthField);
             BoundedInputStream bodyStream = new BoundedInputStream(in, contentLength);
-
-            int i = parser.target.indexOf('?');
-            String path, query;
-            if (i == -1) {
-                path = parser.target;
-                query = null;
-            } else {
-                path = parser.target.substring(0, i);
-                query = parser.target.substring(i + 1);
-            }
-
-            return new HttpRequest(parser.method, path, query, "http",
+            return new HttpRequest(parser.method, parser.path, parser.query, "http",
                     (InetSocketAddress) socket.getRemoteSocketAddress(),
-                    (InetSocketAddress) socket.getLocalSocketAddress(), "/", parser.fields, bodyStream);
+                    (InetSocketAddress) socket.getLocalSocketAddress(),
+                    "/", parser.fields, bodyStream);
         }
 
         void sendResponse(WebResponse response) throws IOException {
