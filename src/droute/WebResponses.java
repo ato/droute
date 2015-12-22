@@ -9,8 +9,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Objects;
 
+import static droute.HttpStatus.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
-import static droute.WebStatus.*;
 
 /**
  * Factory methods for constructing WebResponse instances.
@@ -20,8 +21,6 @@ import static droute.WebStatus.*;
  * {@code import static droute.WebResponses.*}
  */
 public final class WebResponses {
-    public static final WebResponse NEXT_HANDLER = response(INTERNAL_SERVER_ERROR, "Next handler");
-
     private WebResponses() {
     }
 
@@ -71,7 +70,7 @@ public final class WebResponses {
     }
 
     public static WebResponse response(int status, String body) {
-        return response(status, WebPayload.wrap(body));
+        return response(status, WebPayload.wrap(body.getBytes(UTF_8)));
     }
 
     public static WebResponse ok(InputStream body) {

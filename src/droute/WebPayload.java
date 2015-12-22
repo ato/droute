@@ -3,17 +3,34 @@ package droute;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 
 public interface WebPayload {
-    void writeBody(OutputStream out) throws IOException;
+    /**
+     * Writes this payload to an OuputStream.
+     */
+    void writeTo(OutputStream out) throws IOException;
 
-    static WebPayload wrap(String string) {
-        return out -> {
-            OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
-            writer.write(string);
-            writer.flush();
+    /**
+     * Returns the length of this payload in bytes.  If the length cannot be determined until the
+     * payload is actually written to a stream return -1.
+     *
+     * The default implementation returns -1.
+     */
+    default long length() {
+        return -1;
+    }
+
+    static WebPayload wrap(byte[] bytes) {
+        return new WebPayload() {
+            @Override
+            public void writeTo(OutputStream out) throws IOException {
+                out.write(bytes);
+            }
+
+            @Override
+            public long length() {
+                return bytes.length;
+            }
         };
     }
 

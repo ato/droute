@@ -127,7 +127,7 @@ class HttpRequestParser {
                     break;
                 case 7: // halt parsing
                     state = opcode & 0xf;
-                    return i - offset;
+                    return i - offset + 1;
                 case 8: // end of query string
                     query = buffer.toString();
                     buffer.setLength(0);

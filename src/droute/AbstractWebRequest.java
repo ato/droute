@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,9 +26,9 @@ abstract class AbstractWebRequest implements WebRequest {
     }
 
     static String determineHost(WebRequest request) {
-        String host = request.header("Host");
-        if (host == null) {
-            Matcher m = HOST_RE.matcher(host);
+        Optional<String> host = request.header("Host");
+        if (host.isPresent()) {
+            Matcher m = HOST_RE.matcher(host.get());
             if (m.matches()) {
                 return m.group(1);
             }

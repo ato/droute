@@ -38,6 +38,6 @@ public final class WebServlet extends HttpServlet {
         for (Map.Entry<String, String> header : response.headers().entries()) {
             servletResponse.addHeader(header.getKey(), header.getValue());
         }
-        response.body().writeBody(servletResponse.getOutputStream());
+        response.body().writeTo(servletResponse.getOutputStream());
     }
 }

@@ -4,9 +4,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Enumeration;
 
 public class ServletWebRequest extends AbstractWebRequest {
@@ -87,5 +85,10 @@ public class ServletWebRequest extends AbstractWebRequest {
     @Override
     public String contextPath() {
         return servletRequest.getContextPath();
+    }
+
+    @Override
+    public String protocol() {
+        return servletRequest.getProtocol();
     }
 }

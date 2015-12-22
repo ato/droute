@@ -3,7 +3,7 @@ package droute;
 /**
  * HTTP Status codes
  */
-public final class WebStatus {
+public final class HttpStatus {
     public final static int CONTINUE = 100;
     public final static int SWITCHING_PROTOCOLS = 101;
     public final static int OK = 200;
@@ -47,7 +47,7 @@ public final class WebStatus {
     public final static int GATEWAY_TIMEOUT = 504;
     public final static int HTTP_VERSION_NOT_SUPPORTED = 505;
 
-    private WebStatus() {
+    private HttpStatus() {
     }
 
     /**

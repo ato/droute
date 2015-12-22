@@ -234,7 +234,7 @@ final class LinkedTreeMap<K, V> extends AbstractMap<K, V> implements Serializabl
        */
 
             Node<K, V> adjacent = (left.height > right.height) ? left.last() : right.first();
-            removeInternal(adjacent, false); // takes care of rebalance and size--
+            removeInternal(adjacent, false); // takes care of rebalance and length--
 
             int leftHeight = 0;
             left = node.left;

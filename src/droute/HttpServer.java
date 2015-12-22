@@ -1,10 +1,15 @@
 package droute;
 
 import java.io.*;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static droute.WebRequests.HTTP10;
+import static droute.WebRequests.HTTP11;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 public final class HttpServer implements Runnable, Closeable {
@@ -30,7 +35,7 @@ public final class HttpServer implements Runnable, Closeable {
      *
      * @throws IOException if an IO error occured when accepting connections
      */
-    void serve() throws IOException {
+    public void serve() throws IOException {
         while (!serverSocket.isClosed()) {
             Socket socket;
             try {
@@ -55,7 +60,7 @@ public final class HttpServer implements Runnable, Closeable {
     /**
      * Returns the local address of the socket this server is listening on.
      */
-    InetSocketAddress localAddress() {
+    public InetSocketAddress localAddress() {
         return (InetSocketAddress) serverSocket.getLocalSocketAddress();
     }
 
@@ -84,14 +89,20 @@ public final class HttpServer implements Runnable, Closeable {
 
     class Connection implements Runnable, Closeable {
         final Socket socket;
+        final InetSocketAddress remoteAddress;
+        final InetSocketAddress localAddress;
         final HttpRequestParser parser = new HttpRequestParser();
         final InputStream in;
+        final OutputStream out;
         final byte[] buffer = new byte[8192];
         int bufPos = 0, bufEnd = 0;
 
         Connection(Socket socket) throws IOException {
             this.socket = socket;
             in = socket.getInputStream();
+            out = new BufferedOutputStream(socket.getOutputStream());
+            localAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
+            remoteAddress = (InetSocketAddress) socket.getLocalSocketAddress();
         }
 
         public void run() {
@@ -100,7 +111,8 @@ public final class HttpServer implements Runnable, Closeable {
                     bufPos += parser.parse(buffer, bufPos, bufEnd - bufPos);
 
                     if (parser.isError()) {
-                        sendResponse(WebResponses.response(400, "Bad Request"));
+                        System.err.println("parse error");
+                        sendResponse(null, WebResponses.response(400, "Bad Request"));
                         break;
                     } else if (parser.isFinished()) {
                         ByteArrayInputStream bufStream = new ByteArrayInputStream(buffer, bufPos, bufEnd - bufPos);
@@ -108,11 +120,11 @@ public final class HttpServer implements Runnable, Closeable {
                         WebRequest request = createRequest(parser, new SequenceInputStream(bufStream, in));
                         WebResponse response = handle(request);
 
-                        sendResponse(response);
-
                         consumeRemainingRequestBody(request);
-
                         bufPos = bufEnd - bufStream.available();
+
+                        sendResponse(request, response);
+
                         parser.reset();
                     }
                 }
@@ -152,16 +164,11 @@ public final class HttpServer implements Runnable, Closeable {
         }
 
         private boolean fillBuffer() throws IOException {
-            if (socket.isClosed()) {
-                return false;
-            }
             if (bufPos >= bufEnd) {
                 bufEnd = in.read(buffer);
-                if (bufEnd == -1) {
-                    return true;
-                }
+                bufPos = 0;
             }
-            return false;
+            return bufEnd != -1 && !socket.isClosed();
         }
 
         private WebRequest createRequest(HttpRequestParser parser, InputStream in) {
@@ -169,96 +176,139 @@ public final class HttpServer implements Runnable, Closeable {
             long contentLength = contentLengthField == null ? 0 : Long.parseLong(contentLengthField);
             BoundedInputStream bodyStream = new BoundedInputStream(in, contentLength);
             return new HttpRequest(parser.method, parser.path, parser.query, "http",
-                    (InetSocketAddress) socket.getRemoteSocketAddress(),
-                    (InetSocketAddress) socket.getLocalSocketAddress(),
+                    parser.version != null ? parser.version.toUpperCase(Locale.US) : HTTP10,
+                    remoteAddress, localAddress,
                     "/", parser.fields, bodyStream);
         }
 
-        void sendResponse(WebResponse response) throws IOException {
-            OutputStream out = new BufferedOutputStream(socket.getOutputStream());
+        void sendResponse(WebRequest request, WebResponse response) throws IOException {
+            long payloadLength = response.body().length();
+            boolean knownLength = payloadLength >= 0;
+            boolean closing = clientWantsUsToClose(request);
+            boolean chunking = !closing && !knownLength && request.protocol().equals(HTTP11);
 
-            populateDefaultResponseHeaders(response);
-            sendResponseHeader(response, out);
-            sendResponseBody(response, out);
+            /*
+             * if we can't use chunked encoding and also don't know the payload length
+             * we have no choice but to indicate end of payload by closing
+             */
+            if (!chunking && !knownLength) {
+                closing = true;
+            }
+
+            if (!response.headers().containsKey("Date")) {
+                response.setHeader("Date", WebResponses.formatHttpDate(System.currentTimeMillis()));
+            }
+
+            if (closing) {
+                response.setHeader("Connection", "close");
+            } else if (request.protocol().equals(HTTP10)) {
+                response.setHeader("Connection", "keep-alive");
+            }
+
+            if (chunking) {
+                response.setHeader("Transfer-Encoding", "chunked");
+            }
+
+            if (knownLength) {
+                response.setHeader("Content-Length", Long.toString(payloadLength));
+            }
+
+            out.write(formatResponseHeader(response));
+
+            if (chunking) {
+                try (ChunkedOutputStream chunkedOut = new ChunkedOutputStream(out)) {
+                    response.body().writeTo(chunkedOut);
+                }
+            } else {
+                response.body().writeTo(out);
+            }
 
             out.flush();
-            out.close();
+
+            if (closing) {
+                teardown();
+            }
         }
 
-        private void populateDefaultResponseHeaders(WebResponse response) {
-            MultiMap<String, String> headers = response.headers();
-
-            if (!headers.containsKey("Date")) {
-                headers.put("Date", WebResponses.formatHttpDate(System.currentTimeMillis()));
+        /**
+         * Shut our end of the connection then discard all input until the client closes.
+         *
+         * @see <a href="https://tools.ietf.org/html/rfc7230#section-6.6">RFC7230 section 6.6</a>
+         */
+        private void teardown() {
+            try {
+                socket.shutdownOutput();
+            } catch (IOException e) {
+                // no worries
             }
 
-            headers.put("Connection", "close");
-        }
-
-        void sendResponseHeader(WebResponse response, OutputStream out) throws IOException {
-            StringBuilder header = new StringBuilder();
-
-            header.append("HTTP/1.1 ");
-            header.append(Integer.toString(validateStatusCode(response.status())));
-            header.append(" ");
-            header.append(WebStatus.reasonPhrase(response.status()));
-            header.append("\r\n");
-
-            for (Map.Entry<String, String> entry : response.headers().entries()) {
-                header.append(validateFieldName(entry.getKey()));
-                header.append(": ");
-                header.append(validateFieldValue(entry.getValue()));
-                header.append("\r\n");
+            try {
+                while (!socket.isInputShutdown()) {
+                    int n = in.read(buffer, 0, buffer.length);
+                    if (n < 0) {
+                        break;
+                    }
+                }
+            } catch (IOException e) {
+                // no worries
             }
 
-            header.append("\r\n");
-
-            out.write(header.toString().getBytes(ISO_8859_1));
+            try {
+                socket.close();
+            } catch (IOException e) {
+                // no worries
+            }
         }
 
-
-        void sendResponseBody(WebResponse response, OutputStream out) throws IOException {
-            response.body().writeBody(out);
-        }
-
+        /**
+         * Immediately close the connection. Potentially interrupting an in-progress read or write.
+         */
         public void close() throws IOException {
             this.socket.close();
         }
     }
 
-    static final BitSet TOKEN_CHARS = charBitSet("!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~^`|");
-
-    static BitSet charBitSet(String chars) {
-        BitSet bitset = new BitSet();
-        for (int i = 0; i < chars.length(); i++) {
-            bitset.set(chars.charAt(i));
+    /**
+     * Determines whether we should close the connection after responding to this request.
+     *
+     * @return true if the connection should be closed
+     * @see <a href="https://tools.ietf.org/html/rfc7230#section-6.3">RFC7230 section 6.3</a>
+     */
+    static private boolean clientWantsUsToClose(WebRequest request) {
+        if (request == null) {
+            return true;
         }
-        return bitset;
+        Optional<String> connection = request.header("Connection");
+        if (connection.isPresent() && connection.get().equalsIgnoreCase("close")) {
+            return true;
+        } else if (request.protocol().equals(HTTP11)) {
+            return false;
+        } else if (request.protocol().equals(HTTP10) &&
+                connection.isPresent() && connection.get().equalsIgnoreCase("keep-alive")) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
-    static int validateStatusCode(int code) {
-        if (code < 100 || code > 999) {
-            throw new IllegalArgumentException("Illegal HTTP status code: " + code + " (must be 3 digits)");
-        }
-        return code;
-    }
+    static byte[] formatResponseHeader(WebResponse response) throws IOException {
+        StringBuilder header = new StringBuilder();
 
-    static String validateFieldName(String name) {
-        for (int i = 0; i < name.length(); i++) {
-            if (!TOKEN_CHARS.get(name.charAt(i))) {
-                throw new IllegalArgumentException("Illegal character in HTTP response header field name: " + name.charAt(i));
-            }
-        }
-        return name;
-    }
+        header.append("HTTP/1.1 ");
+        header.append(Integer.toString(response.status()));
+        header.append(" ");
+        header.append(HttpStatus.reasonPhrase(response.status()));
+        header.append("\r\n");
 
-    static String validateFieldValue(String value) {
-        for (int i = 0; i < value.length(); i++) {
-            int c = value.charAt(i) & 0xFFFF;
-            if (c < 32 || c > 255) {
-                throw new IllegalArgumentException("Illegal character in HTTP response header field value: " + c);
-            }
+        for (Map.Entry<String, String> entry : response.headers().entries()) {
+            header.append(entry.getKey());
+            header.append(": ");
+            header.append(entry.getValue());
+            header.append("\r\n");
         }
-        return value;
+
+        header.append("\r\n");
+
+        return header.toString().getBytes(ISO_8859_1);
     }
 }

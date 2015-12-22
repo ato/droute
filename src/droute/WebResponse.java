@@ -1,6 +1,7 @@
 package droute;
 
 import java.util.Arrays;
+import java.util.BitSet;
 
 public final class WebResponse {
     private int status = 200;
@@ -25,14 +26,21 @@ public final class WebResponse {
     }
 
     public void addHeader(String key, String value) {
+        validateFieldName(key);
+        validateFieldValue(value);
         headers.put(key, value);
     }
 
     public void setHeader(String key, String value) {
+        validateFieldName(key);
+        validateFieldValue(value);
         headers.replaceValues(key, Arrays.asList(value));
     }
 
     public void setStatus(int status) {
+        if (status < 100 || status > 999) {
+            throw new IllegalArgumentException("Illegal HTTP status code: " + status + " (must be 3 digits)");
+        }
         this.status = status;
     }
 
@@ -44,5 +52,31 @@ public final class WebResponse {
         return body;
     }
 
+    private static final BitSet TOKEN_CHARS = charBitSet("!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~^`|");
+
+    private static BitSet charBitSet(String chars) {
+        BitSet bitset = new BitSet();
+        for (int i = 0; i < chars.length(); i++) {
+            bitset.set(chars.charAt(i));
+        }
+        return bitset;
+    }
+
+    private static void validateFieldName(String name) {
+        for (int i = 0; i < name.length(); i++) {
+            if (!TOKEN_CHARS.get(name.charAt(i))) {
+                throw new IllegalArgumentException("Illegal character in HTTP response header field name: " + name.charAt(i));
+            }
+        }
+    }
+
+    private static void validateFieldValue(String value) {
+        for (int i = 0; i < value.length(); i++) {
+            int c = value.charAt(i) & 0xFFFF;
+            if ((c != '\t' && c < 32) || c > 255) {
+                throw new IllegalArgumentException("Illegal character in HTTP response header field value: " + c);
+            }
+        }
+    }
 
 }

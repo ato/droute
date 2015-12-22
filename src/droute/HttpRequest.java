@@ -14,12 +14,14 @@ class HttpRequest extends AbstractWebRequest {
     private final String contextPath;
     private final MultiMap<String,String> headers;
     private final InputStream bodyStream;
+    private final String protocol;
 
-    public HttpRequest(String method, String path, String queryString, String scheme, InetSocketAddress remoteAddress, InetSocketAddress localAddress, String contextPath, MultiMap<String,String> headers, InputStream bodyStream) {
+    public HttpRequest(String method, String path, String queryString, String scheme, String protocol, InetSocketAddress remoteAddress, InetSocketAddress localAddress, String contextPath, MultiMap<String, String> headers, InputStream bodyStream) {
         this.method = method;
         this.path = path;
         this.queryString = queryString;
         this.scheme = scheme;
+        this.protocol = protocol;
         this.remoteAddress = remoteAddress;
         this.localAddress = localAddress;
         this.contextPath = contextPath;
@@ -70,6 +72,11 @@ class HttpRequest extends AbstractWebRequest {
     @Override
     public String contextPath() {
         return contextPath;
+    }
+
+    @Override
+    public String protocol() {
+        return protocol;
     }
 
     @Override

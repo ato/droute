@@ -1,8 +1,14 @@
 package droute;
 
-import java.io.*;
-import java.net.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 public interface WebRequest {
 
@@ -70,6 +76,11 @@ public interface WebRequest {
      */
     String contextPath();
 
+    /**
+     * Returns the protocol version this request was made using. For example: "HTTP/1.0".
+     */
+    String protocol();
+
     //-----------------------------------------------------------------
     // Convenience Methods
     //-----------------------------------------------------------------
@@ -103,7 +114,7 @@ public interface WebRequest {
      * Interpret the request body as form data. This will consume the body stream.
      */
     default MultiMap<String, String> formMap() {
-        String contentType = header("Content-Type");
+        String contentType = header("Content-Type").orElse(null);
         if ("application/x-www-form-urlencoded".equals(contentType)) {
             try {
                 return HttpRequest.parseFormData(bodyStream());
@@ -118,42 +129,42 @@ public interface WebRequest {
      * Returns the parsed contents of the Cookie header.
      */
     default MultiMap<String, String> cookies() {
-        return HttpRequest.parseCookieHeader(header("Cookie"));
+        return header("Cookie").map(HttpRequest::parseCookieHeader).orElseGet(LinkedTreeMultiMap::new);
     }
 
     /**
      * Returns the first matching query string parameter.
      */
-    default String query(String key) {
-        return queryMap().getFirst(key);
+    default Optional<String> query(String key) {
+        return Optional.ofNullable(queryMap().getFirst(key));
     }
 
     /**
      * Returns the first matching form data parameter.
      */
-    default String form(String key) {
-        return formMap().getFirst(key);
+    default Optional<String> form(String key) {
+        return Optional.ofNullable(formMap().getFirst(key));
     }
 
     /**
      * Returns the first matching HTTP header.
      */
-    default String header(String name) {
-        return headers().getFirst(name);
+    default Optional<String> header(String name) {
+        return Optional.ofNullable(headers().getFirst(name));
     }
 
     /**
      * Returns the first matching cookie.
      */
-    default String cookie(String name) {
-        return cookies().getFirst(name);
+    default Optional<String> cookie(String name) {
+        return Optional.ofNullable(cookies().getFirst(name));
     }
 
     /**
      * Returns the first matching URL parameter.
      */
-    default String param(String key) {
-        return params().getFirst(key);
+    default Optional<String> param(String key) {
+        return Optional.ofNullable(params().getFirst(key));
     }
 
     /**
