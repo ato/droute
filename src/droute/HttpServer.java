@@ -5,12 +5,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.*;
+import java.util.Collections;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static droute.WebRequests.HTTP10;
 import static droute.WebRequests.HTTP11;
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 public final class HttpServer implements Runnable, Closeable {
     private final ServerSocket serverSocket;
@@ -213,7 +215,7 @@ public final class HttpServer implements Runnable, Closeable {
                 response.setHeader("Content-Length", Long.toString(payloadLength));
             }
 
-            out.write(formatResponseHeader(response));
+            out.write(response.serializeHeader());
 
             if (chunking) {
                 try (ChunkedOutputStream chunkedOut = new ChunkedOutputStream(out)) {
@@ -289,26 +291,5 @@ public final class HttpServer implements Runnable, Closeable {
         } else {
             return true;
         }
-    }
-
-    static byte[] formatResponseHeader(WebResponse response) throws IOException {
-        StringBuilder header = new StringBuilder();
-
-        header.append("HTTP/1.1 ");
-        header.append(Integer.toString(response.status()));
-        header.append(" ");
-        header.append(HttpStatus.reasonPhrase(response.status()));
-        header.append("\r\n");
-
-        for (Map.Entry<String, String> entry : response.headers().entries()) {
-            header.append(entry.getKey());
-            header.append(": ");
-            header.append(entry.getValue());
-            header.append("\r\n");
-        }
-
-        header.append("\r\n");
-
-        return header.toString().getBytes(ISO_8859_1);
     }
 }

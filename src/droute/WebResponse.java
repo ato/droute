@@ -2,6 +2,9 @@ package droute;
 
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 public final class WebResponse {
     private int status = 200;
@@ -50,6 +53,27 @@ public final class WebResponse {
 
     public WebPayload body() {
         return body;
+    }
+
+    byte[] serializeHeader()  {
+        StringBuilder header = new StringBuilder();
+
+        header.append("HTTP/1.1 ");
+        header.append(Integer.toString(status));
+        header.append(" ");
+        header.append(HttpStatus.reasonPhrase(status));
+        header.append("\r\n");
+
+        for (Map.Entry<String, String> entry : headers.entries()) {
+            header.append(entry.getKey());
+            header.append(": ");
+            header.append(entry.getValue());
+            header.append("\r\n");
+        }
+
+        header.append("\r\n");
+
+        return header.toString().getBytes(ISO_8859_1);
     }
 
     private static final BitSet TOKEN_CHARS = charBitSet("!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~^`|");
