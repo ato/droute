@@ -184,52 +184,54 @@ public final class HttpServer implements Runnable, Closeable {
         }
 
         void sendResponse(WebRequest request, WebResponse response) throws IOException {
-            long payloadLength = response.body().length();
-            boolean knownLength = payloadLength >= 0;
-            boolean closing = clientWantsUsToClose(request);
-            boolean chunking = !closing && !knownLength && request.protocol().equals(HTTP11);
-
-            /*
-             * if we can't use chunked encoding and also don't know the payload length
-             * we have no choice but to indicate end of payload by closing
-             */
-            if (!chunking && !knownLength) {
-                closing = true;
-            }
-
             if (!response.headers().containsKey("Date")) {
                 response.setHeader("Date", WebResponses.formatHttpDate(System.currentTimeMillis()));
             }
 
-            if (closing) {
-                response.setHeader("Connection", "close");
-            } else if (request.protocol().equals(HTTP10)) {
-                response.setHeader("Connection", "keep-alive");
+            long payloadLength = response.body().length();
+            if (payloadLength >= 0) {
+                response.setHeader("Content-Length", Long.toString(response.body().length()));
             }
 
-            if (chunking) {
-                response.setHeader("Transfer-Encoding", "chunked");
-            }
-
-            if (knownLength) {
-                response.setHeader("Content-Length", Long.toString(payloadLength));
-            }
-
-            out.write(response.serializeHeader());
-
-            if (chunking) {
-                try (ChunkedOutputStream chunkedOut = new ChunkedOutputStream(out)) {
-                    response.body().writeTo(chunkedOut);
+            if (request.protocol().equals(HTTP10)) {
+                if (payloadLength >= 0 && request.header("Connection").orElse("close").equalsIgnoreCase("keep-alive")) {
+                    response.setHeader("Connection", "keep-alive");
+                    sendResponseWithKnownLength(response, payloadLength);
+                } else {
+                    sendResponseAndClose(response);
                 }
-            } else {
-                response.body().writeTo(out);
+            } else { // HTTP/1.1
+                if (request.header("Connection").orElse("keep-alive").equalsIgnoreCase("close")) {
+                    response.setHeader("Connection", "close");
+                    sendResponseAndClose(response);
+                } else if (payloadLength >= 0) {
+                    sendResponseWithKnownLength(response, payloadLength);
+                } else {
+                    sendResponseWithChunkedEncoding(response);
+                }
             }
+        }
 
+        private void sendResponseAndClose(WebResponse response) throws IOException {
+            out.write(response.serializeHeader());
+            response.body().writeTo(out);
             out.flush();
+            teardown();
+        }
 
-            if (closing) {
-                teardown();
+        private void sendResponseWithKnownLength(WebResponse response, long payloadLength) throws IOException {
+            out.write(response.serializeHeader());
+            response.body().writeTo(out);
+            out.flush();
+        }
+
+        private void sendResponseWithChunkedEncoding(WebResponse response) throws IOException {
+            response.setHeader("Transfer-Encoding", "chunked");
+            out.write(response.serializeHeader());
+            try (ChunkedOutputStream chunkedOut = new ChunkedOutputStream(out)) {
+                response.body().writeTo(chunkedOut);
             }
+            out.flush();
         }
 
         /**
