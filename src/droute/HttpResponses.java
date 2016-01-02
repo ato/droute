@@ -20,8 +20,8 @@ import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
  * <p/>
  * {@code import static droute.WebResponses.*}
  */
-public final class WebResponses {
-    private WebResponses() {
+public final class HttpResponses {
+    private HttpResponses() {
     }
 
     private static String extension(String filename) {
@@ -58,37 +58,37 @@ public final class WebResponses {
      * Convenience constructors
 	 */
 
-    public static WebResponse response(int status, WebPayload body) {
-        WebResponse response = new WebResponse();
+    public static HttpResponse response(int status, HttpPayload body) {
+        HttpResponse response = new HttpResponse();
         response.setStatus(status);
         response.setBody(body);
         return response;
     }
 
-    public static WebResponse response(int status, InputStream body) {
-        return response(status, WebPayload.wrap(body));
+    public static HttpResponse response(int status, InputStream body) {
+        return response(status, new InputStreamPayload(body));
     }
 
-    public static WebResponse response(int status, String body) {
-        return response(status, WebPayload.wrap(body.getBytes(UTF_8)));
+    public static HttpResponse response(int status, String body) {
+        return response(status, new ByteArrayPayload(body.getBytes(UTF_8)));
     }
 
-    public static WebResponse ok(InputStream body) {
+    public static HttpResponse ok(InputStream body) {
         return response(OK, body);
     }
 
-    public static WebResponse ok(String body) {
+    public static HttpResponse ok(String body) {
         return response(OK, body);
     }
 
     /**
      * Returns a 404 Not Found response.
      */
-    public static WebResponse notFound(String body) {
+    public static HttpResponse notFound(String body) {
         return response(NOT_FOUND, body);
     }
 
-    public static WebResponse notFound(InputStream body) {
+    public static HttpResponse notFound(InputStream body) {
         return response(NOT_FOUND, body);
     }
 
@@ -97,9 +97,9 @@ public final class WebResponses {
      * use {@link #seeOther(String)}, {@link #redirect(String)} or {@link #movedPermanently(String)}
      * instead of calling this method directly.
      */
-    public static WebResponse redirect(int status, String location) {
+    public static HttpResponse redirect(int status, String location) {
         Objects.requireNonNull(status, "location");
-        WebResponse response = new WebResponse();
+        HttpResponse response = new HttpResponse();
         response.setStatus(status);
         response.setHeader("Location", location);
         return response;
@@ -109,7 +109,7 @@ public final class WebResponses {
      * Returns a 303 See Other response. Even if the initial request was a POST the browser will fetch
      * the redirect location using GET.
      */
-    public static WebResponse seeOther(String location) {
+    public static HttpResponse seeOther(String location) {
         return redirect(SEE_OTHER, location);
     }
 
@@ -120,7 +120,7 @@ public final class WebResponses {
      * Note that {@link #seeOther(String)} should instead be used when redirecting to a new page after
      * processing a POST.
      */
-    public static WebResponse redirect(String location) {
+    public static HttpResponse redirect(String location) {
         return redirect(TEMPORARY_REDIRECT, location);
     }
 
@@ -133,7 +133,7 @@ public final class WebResponses {
      * Note that {@link #seeOther(String)} should be used when redirecting to a new page after
      * processing a POST.
      */
-    public static WebResponse movedPermanently(String location) {
+    public static HttpResponse movedPermanently(String location) {
         return redirect(MOVED_PERMANENTLY, location);
     }
 
@@ -141,7 +141,7 @@ public final class WebResponses {
      * Sends a classpath resource to the client.  Sets the Last-Modified, Content-Length and Content-Type
      * headers when possible.
      */
-    public static WebResponse resource(URL resource) throws IOException {
+    public static HttpResponse resource(URL resource) throws IOException {
         Objects.requireNonNull(resource, "resource");
 
         URLConnection conn = resource.openConnection();
@@ -149,7 +149,7 @@ public final class WebResponses {
         long length = conn.getContentLengthLong();
         String type = guessContentType(resource.getPath());
 
-        WebResponse response = ok(conn.getInputStream());
+        HttpResponse response = ok(conn.getInputStream());
         if (lastModified != 0) {
             response.addHeader("Last-Modified", formatHttpDate(lastModified));
         }
@@ -167,11 +167,23 @@ public final class WebResponses {
      *
      * Throws a WebResponseException to unwind back to the web server.
      */
-    public static void halt(WebResponse response) {
-        throw new WebResponseException(response);
+    public static void halt(HttpResponse response) {
+        throw new HttpResponseException(response);
     }
 
     static String formatHttpDate(long epochMillis) {
         return RFC_1123_DATE_TIME.format(OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneOffset.UTC));
+    }
+
+    /**
+     * Constructs a handler that returns a copy of the given response.
+     */
+    public static HttpHandler handler(final HttpResponse response) {
+        return new HttpHandler() {
+            @Override
+            public HttpResponse handle(HttpRequest request) throws IOException {
+                return new HttpResponse(response);
+            }
+        };
     }
 }

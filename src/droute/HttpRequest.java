@@ -1,100 +1,97 @@
 package droute;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.Map;
+import java.util.Optional;
 
-class HttpRequest extends AbstractWebRequest {
+public interface HttpRequest {
 
-    private final String method;
-    private final String path;
-    private final String queryString;
-    private final String scheme;
-    private final InetSocketAddress remoteAddress;
-    private final InetSocketAddress localAddress;
-    private final String contextPath;
-    private final MultiMap<String,String> headers;
-    private final InputStream bodyStream;
-    private final String protocol;
+    /**
+     * The HTTP request method such as "onGET" or "POST".
+     */
+    String method();
 
-    public HttpRequest(String method, String path, String queryString, String scheme, String protocol, InetSocketAddress remoteAddress, InetSocketAddress localAddress, String contextPath, MultiMap<String, String> headers, InputStream bodyStream) {
-        this.method = method;
-        this.path = path;
-        this.queryString = queryString;
-        this.scheme = scheme;
-        this.protocol = protocol;
-        this.remoteAddress = remoteAddress;
-        this.localAddress = localAddress;
-        this.contextPath = contextPath;
-        this.headers = headers;
-        this.bodyStream = bodyStream;
-    }
+    /**
+     * The HTTP request headers.
+     */
+    Map<String, String> headers();
 
-    @Override
-    public String method() {
-        return method;
-    }
+    URI uri();
 
-    @Override
-    public MultiMap<String,String> headers() {
-        return headers;
-    }
+    URI contextUri();
 
-    @Override
-    public InputStream bodyStream() {
-        return bodyStream;
-    }
+    MultiMap<String,String> formMap();
 
-    @Override
-    public String scheme() {
-        return scheme;
-    }
+    Map<String, String> cookies();
 
-    @Override
-    public InetSocketAddress localAddress() {
-        return localAddress;
-    }
+    /**
+     * Returns a map of the decoded query string parameters.
+     */
+    MultiMap<String, String> queryMap();
 
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return remoteAddress;
-    }
+    /**
+     * Returns a map of parameters extracted from the URI during routing.
+     */
+    MultiMap<String,String> params();
 
-    @Override
-    public String queryString() {
-        return queryString;
-    }
+    /**
+     * Returns the HTTP body as an InputStream.
+     */
+    InputStream bodyStream() throws IOException;
 
-    @Override
-    public String path() {
-        return path;
-    }
+    /**
+     * Returns the protocol scheme ("http" or "https").
+     */
+    String scheme();
 
-    @Override
-    public String contextPath() {
-        return contextPath;
-    }
+    /**
+     * The local address the client is connected to.
+     */
+    InetSocketAddress localAddress();
 
-    @Override
-    public String protocol() {
-        return protocol;
-    }
+    /**
+     * The address of the remote client.
+     */
+    InetSocketAddress remoteAddress();
 
-    @Override
-    public String toString() {
-        return "RequestImpl{" +
-                "method='" + method + '\'' +
-                ", path='" + path + '\'' +
-                ", queryString='" + queryString + '\'' +
-                ", scheme='" + scheme + '\'' +
-                ", remoteAddress=" + remoteAddress +
-                ", localAddress=" + localAddress +
-                ", contextPath='" + contextPath + '\'' +
-                ", headers=" + headers +
-                ", bodyStream=" + bodyStream +
-                ", cachedFormMap=" + cachedFormMap +
-                ", cachedQueryMap=" + cachedQueryMap +
-                ", cachedCookies=" + cachedCookies +
-                '}';
-    }
+    /**
+     * The raw query string.
+     */
+    String queryString();
 
+    /**
+     * The path of this request relative to the context root (excluding the query string).
+     * <p/>
+     * For example if the application is mounted at /bakery and /bakery/scones/lemonade was requested, this returns
+     * "/scones/lemonade".
+     */
+    String path();
+
+    /**
+     * The path to the root of the web application.
+     */
+    String contextPath();
+
+    /**
+     * Returns the protocol version this request was made using. For example: "HTTP/1.0".
+     */
+    String protocol();
+
+    Optional<String> query(String key);
+
+    Optional<String> form(String key);
+
+    Optional<String> header(String name);
+
+    Optional<String> cookie(String name);
+
+    Optional<String> param(String key);
+
+    /**
+     * Replaces the URL parameter multimap.
+     */
+    void setParams(MultiMap<String, String> params);
 }

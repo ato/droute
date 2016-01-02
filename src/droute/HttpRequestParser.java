@@ -1,5 +1,8 @@
 package droute;
 
+import java.util.Map;
+import java.util.TreeMap;
+
 /**
  * Parses HTTP requests
  * <p/>
@@ -8,14 +11,25 @@ package droute;
  * <p/>
  * This parser deviates from RFC7230 in the following ways:
  * <ul>
- *     <li>requests using the deprecated header line folding are rejected</li>
- *     <li>the HTTP version number is optional and not validated by the parser</li>
- *     <li>target URI validity is not enforced beyond checking the allowed characters</li>
+ * <li>requests using the deprecated header line folding syntax are rejected</li>
+ * <li>the HTTP version number is optional and not validated by the parser</li>
+ * <li>target URI validity is not enforced beyond checking the allowed characters</li>
  * </ul>
+ * <p/>
  */
 class HttpRequestParser {
-    private static int SYMBOL_COUNT = 10;
+    /**
+     * Maps raw bytes read off the wire to a symbol representing a character class.
+     */
     private static final byte[] SYMBOLS = buildSymbolTable();
+    /**
+     * The FSM transition table mapping (state, symbol) to (action, nextState)
+     * <p/>
+     * Rows are states, columns are symbols.
+     * <p/>
+     * Each entry in the transition table is a byte. The upper nibble is the id
+     * of a side-effect action. The lower nibble is the next state to transition to.
+     */
     private static final byte[] TRANSITIONS = {
             /* v   tok   url   com   ':'   ' '   '?'  '\r'  '\n'  non-printable */
             0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, /* state 0: start of method */
@@ -29,25 +43,25 @@ class HttpRequestParser {
             0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x04, 0x7e, /* state 8: field newline */
             0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7e, 0x7f, 0x7e, /* state 9: final newline */
             0x7e, 0x1a, 0x7e, 0x1a, 0x7e, 0x21, 0x7e, 0x7e, 0x7e, 0x7e, /* state a: method */
-            0x7e, 0x7e, 0x1b, 0x1b, 0x1b, (byte)0x82, 0x1b, 0x33, 0x7e, 0x7e, /* state b: query-string */
+            0x7e, 0x7e, 0x1b, 0x1b, 0x1b, (byte) 0x82, 0x1b, 0x33, 0x7e, 0x7e, /* state b: query-string */
             /*
              * entry form 0xAS: A - action, S - next state
-             * final states: e - error, f - finished
+             * special final states: e - error, f - finished
              */
     };
+    /**
+     * The number of different symbols (character classes) in the FSM's alphabet.
+     */
+    private static int SYMBOL_COUNT = 10;
 
-    int state;
-    StringBuilder buffer;
+    final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    private final StringBuilder buffer = new StringBuilder();
     String method;
     String path;
     String query;
     String version;
-    String fieldName;
-    MultiMap<String, String> fields;
-
-    HttpRequestParser() {
-        reset();
-    }
+    private int state = 0;
+    private String fieldName;
 
     private static byte[] buildSymbolTable() {
         byte[] symbols = new byte[256];
@@ -55,19 +69,18 @@ class HttpRequestParser {
         for (int i = 0; i < 32; i++) {
             symbols[i] = 9; // non-printable
         }
-        symbols[127] = 9; // DEL (non-printable)
-
-        symbols['\t'] = 0; // tab is allowed in field values
 
         fill(symbols, "^`|", 1); // token only
         fill(symbols, "(),/:;=@[]", 2); // url only
         fill(symbols, "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~", 3); // common
 
+        symbols['\t'] = 0; // tab is allowed in field values
         symbols[':'] = 4;
         symbols[' '] = 5;
         symbols['?'] = 6;
         symbols['\r'] = 7;
         symbols['\n'] = 8;
+        symbols[127] = 9; // DEL (non-printable)
 
         return symbols;
     }
@@ -78,21 +91,24 @@ class HttpRequestParser {
         }
     }
 
-    public void reset() {
-        state = 0;
-        buffer = new StringBuilder();
-        method = null;
-        path = null;
-        query = null;
-        version = null;
-        fieldName = null;
-        fields = new LinkedTreeMultiMap<>(String.CASE_INSENSITIVE_ORDER);
-    }
+    /**
+     * Runs the parser. This method will return when parsing is finished, a syntax error was encountered or length
+     * bytes have been consumed. Call isError() and isFinished() to determine which. In the last case parse() may
+     * be called again with new input.
+     *
+     * @param data   contains the bytes to parse
+     * @param offset is the index into the data array to start from
+     * @param length is the maximum number of bytes to consume
+     * @return the number of bytes consumed
+     */
+    int parse(byte[] data, int offset, int length) {
+        if (isFinished()) {
+            throw new IllegalStateException("parser already finished");
+        } else if (isError()) {
+            throw new IllegalStateException("parser already errored");
+        }
 
-    public int parse(byte[] data, int offset, int length) {
-        int end = offset + length;
-
-        for (int i = offset; i < end; i++) {
+        for (int i = offset; i < offset + length; i++) {
             int b = data[i] & 0xff;
             int symbol = SYMBOLS[b];
             int opcode = TRANSITIONS[state * SYMBOL_COUNT + symbol] & 0xFF;
@@ -121,7 +137,8 @@ class HttpRequestParser {
                     buffer.setLength(0);
                     break;
                 case 6: // end of field-value
-                    fields.put(fieldName, buffer.toString());
+                    String previous = headers.get(fieldName);
+                    headers.put(fieldName, previous != null ? previous + ", " + buffer : buffer.toString());
                     fieldName = null;
                     buffer.setLength(0);
                     break;
@@ -133,7 +150,7 @@ class HttpRequestParser {
                     buffer.setLength(0);
                     break;
                 default:
-                    throw new IllegalStateException("illegal parse action: " + action);
+                    throw new IllegalStateException("parser bug: illegal action: " + action);
             }
 
             state = opcode & 0xf;
@@ -141,11 +158,17 @@ class HttpRequestParser {
         return length;
     }
 
-    public boolean isError() {
+    /**
+     * True when the parser has encountered an error.
+     */
+    boolean isError() {
         return state == 0xe;
     }
 
-    public boolean isFinished() {
+    /**
+     * True when the parser has finished successfully.
+     */
+    boolean isFinished() {
         return state == 0xf;
     }
 }

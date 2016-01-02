@@ -6,14 +6,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.Enumeration;
+import java.util.Map;
+import java.util.TreeMap;
 
-public class ServletWebRequest extends AbstractWebRequest {
+/**
+ * A HttpRequest which adapts a HttpServletRequest from a servlet container.
+ */
+public class ServletHttpRequest extends AbstractHttpRequest {
     private final HttpServletRequest servletRequest;
     private final HttpServletResponse servletResponse;
 
-    private MultiMap<String,String> headers = null;
+    private Map<String, String> headers = null;
 
-    public ServletWebRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+    public ServletHttpRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
     }
@@ -32,15 +37,15 @@ public class ServletWebRequest extends AbstractWebRequest {
     }
 
     @Override
-    public MultiMap<String, String> headers() {
+    public Map<String, String> headers() {
         if (headers == null) {
             headers = copyHeaders();
         }
         return headers;
     }
 
-    private MultiMap<String, String> copyHeaders() {
-        MultiMap<String,String> headers = new LinkedTreeMultiMap<>(String.CASE_INSENSITIVE_ORDER);
+    private Map<String, String> copyHeaders() {
+        Map<String,String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         Enumeration names = servletRequest.getHeaderNames();
         while (names.hasMoreElements()) {
             String name = (String)names.nextElement();

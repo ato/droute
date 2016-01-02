@@ -6,9 +6,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.Arrays;
 
-import static droute.WebResponses.ok;
+import static droute.HttpResponses.ok;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.*;
 
@@ -31,11 +30,11 @@ public class HttpServerTest {
 
         assertFalse(parser.isError());
         assertTrue(parser.isFinished());
-        assertEquals(3, parser.fields.size());
+        assertEquals(2, parser.headers.size());
         assertEquals("/hello/world", parser.path);
         assertEquals("1=2", parser.query);
-        assertEquals("localhost:80", parser.fields.getFirst("Host"));
-        assertEquals(Arrays.asList("fruit", "vegetable"), parser.fields.get("bAnAnA"));
+        assertEquals("localhost:80", parser.headers.get("Host"));
+        assertEquals("fruit, vegetable", parser.headers.get("bAnAnA"));
         assertEquals("HTTP/1.0", parser.version);
     }
 
@@ -50,22 +49,23 @@ public class HttpServerTest {
                 "GET /\r\nall cookies:mine\r\n\r\n",
                 "GET /\r\nnull:null=\0null\r\n\r\n",
         };
-        HttpRequestParser parser = new HttpRequestParser();
         for (String testString : testStrings) {
             byte[] data = testString.getBytes(US_ASCII);
 
-            parser.reset();
+            HttpRequestParser parser = new HttpRequestParser();
             parser.parse(data, 0, data.length);
-
             assertTrue(parser.isError());
         }
     }
 
     @Test
     public void testInteroperability() throws IOException, InterruptedException {
-        WebHandler handler = req -> {
-            assertEquals("/hello", req.path());
-            return ok("OK");
+        HttpHandler handler = new HttpHandler() {
+            @Override
+            public HttpResponse handle(HttpRequest request) throws IOException {
+                assertEquals("/hello", request.path());
+                return ok("OK");
+            }
         };
         try (HttpServer server = new HttpServer(handler, "localhost", 0)) {
             new Thread(server).start();

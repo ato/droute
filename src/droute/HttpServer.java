@@ -10,23 +10,23 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static droute.WebRequests.HTTP10;
+import static droute.HttpRequests.HTTP10;
 
 public final class HttpServer implements Runnable, Closeable {
     private final ServerSocket serverSocket;
-    private final WebHandler handler;
-    private final Set<Connection> connections = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final HttpHandler handler;
+    private final Set<Connection> connections = Collections.newSetFromMap(new ConcurrentHashMap<Connection,Boolean>());
 
-    public HttpServer(WebHandler handler, ServerSocket serverSocket) {
+    public HttpServer(HttpHandler handler, ServerSocket serverSocket) {
         this.handler = handler;
         this.serverSocket = serverSocket;
     }
 
-    public HttpServer(WebHandler handler, int port) throws IOException {
+    public HttpServer(HttpHandler handler, int port) throws IOException {
         this(handler, new ServerSocket(port));
     }
 
-    public HttpServer(WebHandler handler, String bindHost, int port) throws IOException {
+    public HttpServer(HttpHandler handler, String bindHost, int port) throws IOException {
         this(handler, new ServerSocket(port, -1, InetAddress.getByName(bindHost)));
     }
 
@@ -91,7 +91,7 @@ public final class HttpServer implements Runnable, Closeable {
         final Socket socket;
         final InetSocketAddress remoteAddress;
         final InetSocketAddress localAddress;
-        final HttpRequestParser parser = new HttpRequestParser();
+        HttpRequestParser parser = new HttpRequestParser();
         final InputStream in;
         final OutputStream out;
         final byte[] buffer = new byte[8192];
@@ -112,20 +112,20 @@ public final class HttpServer implements Runnable, Closeable {
 
                     if (parser.isError()) {
                         System.err.println("parse error");
-                        sendResponse(null, WebResponses.response(400, "Bad Request"));
+                        sendResponse(null, HttpResponses.response(400, "Bad Request"));
                         break;
                     } else if (parser.isFinished()) {
                         ByteArrayInputStream bufStream = new ByteArrayInputStream(buffer, bufPos, bufEnd - bufPos);
 
-                        WebRequest request = createRequest(parser, new SequenceInputStream(bufStream, in));
-                        WebResponse response = handle(request);
+                        HttpRequest request = createRequest(parser, new SequenceInputStream(bufStream, in));
+                        HttpResponse response = handle(request);
 
                         consumeRemainingRequestBody(request);
                         bufPos = bufEnd - bufStream.available();
 
                         sendResponse(request, response);
 
-                        parser.reset();
+                        parser = new HttpRequestParser();
                     }
                 }
             } catch (IOException e) {
@@ -140,25 +140,25 @@ public final class HttpServer implements Runnable, Closeable {
             }
         }
 
-        private void consumeRemainingRequestBody(WebRequest request) throws IOException {
+        private void consumeRemainingRequestBody(HttpRequest request) throws IOException {
             request.bodyStream().skip(Long.MAX_VALUE);
         }
 
-        private WebResponse handle(WebRequest request) throws IOException {
-            WebResponse response;
+        private HttpResponse handle(HttpRequest request) throws IOException {
+            HttpResponse response;
             try {
                 response = handler.handle(request);
-            } catch (WebResponseException e) {
+            } catch (HttpResponseException e) {
                 response = e.response;
             } catch (IOException e) {
                 throw e;
             } catch (Exception e) {
                 e.printStackTrace();
-                response = WebResponses.response(500, "Uncaught Exception");
+                response = HttpResponses.response(500, "Uncaught Exception");
             }
 
             if (response == null) {
-                response = WebResponses.response(500, "Handler returned null");
+                response = HttpResponses.response(500, "Handler returned null");
             }
             return response;
         }
@@ -171,19 +171,19 @@ public final class HttpServer implements Runnable, Closeable {
             return bufEnd != -1 && !socket.isClosed();
         }
 
-        private WebRequest createRequest(HttpRequestParser parser, InputStream in) {
-            String contentLengthField = parser.fields.getFirst("Content-Length");
+        private HttpRequest createRequest(HttpRequestParser parser, InputStream in) {
+            String contentLengthField = parser.headers.get("Content-Length");
             long contentLength = contentLengthField == null ? 0 : Long.parseLong(contentLengthField);
             BoundedInputStream bodyStream = new BoundedInputStream(in, contentLength);
-            return new HttpRequest(parser.method, parser.path, parser.query, "http",
+            return new SimpleHttpRequest(parser.method, parser.path, parser.query, "http",
                     parser.version != null ? parser.version.toUpperCase(Locale.US) : HTTP10,
                     remoteAddress, localAddress,
-                    "/", parser.fields, bodyStream);
+                    "/", parser.headers, bodyStream);
         }
 
-        void sendResponse(WebRequest request, WebResponse response) throws IOException {
+        void sendResponse(HttpRequest request, HttpResponse response) throws IOException {
             if (!response.headers().containsKey("Date")) {
-                response.setHeader("Date", WebResponses.formatHttpDate(System.currentTimeMillis()));
+                response.setHeader("Date", HttpResponses.formatHttpDate(System.currentTimeMillis()));
             }
 
             long payloadLength = response.body().length();
@@ -210,20 +210,20 @@ public final class HttpServer implements Runnable, Closeable {
             }
         }
 
-        private void sendResponseAndClose(WebResponse response) throws IOException {
+        private void sendResponseAndClose(HttpResponse response) throws IOException {
             out.write(response.serializeHeader());
             response.body().writeTo(out);
             out.flush();
             teardown();
         }
 
-        private void sendResponseWithKnownLength(WebResponse response, long payloadLength) throws IOException {
+        private void sendResponseWithKnownLength(HttpResponse response, long payloadLength) throws IOException {
             out.write(response.serializeHeader());
             response.body().writeTo(out);
             out.flush();
         }
 
-        private void sendResponseWithChunkedEncoding(WebResponse response) throws IOException {
+        private void sendResponseWithChunkedEncoding(HttpResponse response) throws IOException {
             response.setHeader("Transfer-Encoding", "chunked");
             out.write(response.serializeHeader());
             try (ChunkedOutputStream chunkedOut = new ChunkedOutputStream(out)) {

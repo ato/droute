@@ -1,6 +1,6 @@
 package droute;
 
-public class WebRequests {
+public class HttpRequests {
     /*
      * Request methods
      */
