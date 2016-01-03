@@ -10,7 +10,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 /**
  * Writes output via HTTP chunked transfer encoding.
  * <p/>
- * Note: Closing the ChunkedOutputStream will write a terminating chunk and then flush but does not close the
+ * Closing the ChunkedOutputStream will write a terminating chunk and then flush but does not close the
  * underlying stream.
  */
 class ChunkedOutputStream extends FilterOutputStream {

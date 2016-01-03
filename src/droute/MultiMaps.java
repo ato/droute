@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-class MultiMaps {
+final class MultiMaps {
     static <K,V> void addEntry(Map<K,List<V>> map, K key, V value) {
         List<V> values = map.get(key);
         if (values == null) {

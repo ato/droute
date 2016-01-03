@@ -47,9 +47,6 @@ public final class HttpStatus {
     public final static int GATEWAY_TIMEOUT = 504;
     public final static int HTTP_VERSION_NOT_SUPPORTED = 505;
 
-    private HttpStatus() {
-    }
-
     /**
      * Returns the recommended (RFC7231 6.1) reason phrase for a given HTTP status code.
      *

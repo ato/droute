@@ -30,7 +30,7 @@ class HttpRequest {
     protected Map<String, String> cachedCookies = null;
     protected Map<String, List<String>> cachedFormMap = null;
     protected Map<String, List<String>> cachedQueryMap = null;
-    protected Map<String, List<String>> params = new HashMap<String, List<String>>();
+    protected Map<String, List<String>> params = new HashMap<>();
 
     public HttpRequest(String method, String path, String queryString, String scheme, String protocol, InetSocketAddress remoteAddress, InetSocketAddress localAddress, String contextPath, Map<String, String> headers, InputStream bodyStream) {
         this.method = method;
@@ -70,7 +70,7 @@ class HttpRequest {
     }
 
     static Map<String, List<String>> parseFormData(InputStream in) throws IOException {
-        Map<String, List<String>> map = new TreeMap<String, List<String>>();
+        Map<String, List<String>> map = new TreeMap<>();
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         String key = null;
         while (true) {
@@ -239,7 +239,7 @@ class HttpRequest {
      */
     public URI uri() {
         try {
-            return new URI(scheme(), null, HttpRequest.determineHost(this), localAddress().getPort(), path(), queryString(), null);
+            return new URI(scheme(), null, HttpRequest.determineHost(this), portForUri(), path(), queryString(), null);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -253,10 +253,18 @@ class HttpRequest {
      */
     public URI contextUri() {
         try {
-            return new URI(scheme(), null, HttpRequest.determineHost(this), localAddress().getPort(), contextPath(), null, null);
+            return new URI(scheme(), null, HttpRequest.determineHost(this), portForUri(), contextPath(), null, null);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private int portForUri() {
+        int port = localAddress().getPort();
+        if ((port == 80 && "http".equals(scheme())) || (port == 443 && "https".equals(scheme()))) {
+            port = -1;
+        }
+        return port;
     }
 
     /**

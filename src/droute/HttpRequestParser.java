@@ -149,8 +149,6 @@ class HttpRequestParser {
                     query = buffer.toString();
                     buffer.setLength(0);
                     break;
-                default:
-                    throw new IllegalStateException("parser bug: illegal action: " + action);
             }
 
             state = opcode & 0xf;

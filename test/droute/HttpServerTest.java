@@ -8,18 +8,19 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 import static droute.HttpResponses.ok;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.*;
 
 public class HttpServerTest {
+    String text = "GET /hello/world?1=2 HTTP/1.0\r\nHost: localhost:80\r\nBanana:fruit\r\nBANANA: vegetable\r\n\r\n";
+    byte[] data = text.getBytes(US_ASCII);
 
     @Test
     public void testParser() {
         HttpRequestParser parser = new HttpRequestParser();
-        String text = "GET /hello/world?1=2 HTTP/1.0\r\nHost: localhost:80\r\nBanana:fruit\r\nBANANA: vegetable\r\n\r\n";
-        byte[] data = text.getBytes(US_ASCII);
 
         assertFalse(parser.isError());
         assertFalse(parser.isFinished());
@@ -38,6 +39,20 @@ public class HttpServerTest {
         assertEquals("localhost:80", parser.headers.get("Host"));
         assertEquals("fruit, vegetable", parser.headers.get("bAnAnA"));
         assertEquals("HTTP/1.0", parser.version);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void reusingAFinishedParserShouldFail() {
+        HttpRequestParser parser = new HttpRequestParser();
+        parser.parse(data, 0, data.length);
+        parser.parse(data, 0, data.length);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void reusingAnErroredParserShouldFail() {
+        HttpRequestParser parser = new HttpRequestParser();
+        parser.parse("bogus\0".getBytes(StandardCharsets.ISO_8859_1), 0, 6);
+        parser.parse(data, 0, data.length);
     }
 
     @Test
