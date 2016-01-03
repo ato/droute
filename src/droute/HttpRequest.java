@@ -27,6 +27,7 @@ class HttpRequest {
     private final Map<String, String> headers;
     private final InputStream bodyStream;
     private final String protocol;
+    private final Map<Class, Object> extensions = new HashMap<>();
     protected Map<String, String> cachedCookies = null;
     protected Map<String, List<String>> cachedFormMap = null;
     protected Map<String, List<String>> cachedQueryMap = null;
@@ -334,5 +335,63 @@ class HttpRequest {
      */
     public void setParams(Map<String, List<String>> params) {
         this.params = params;
+    }
+
+    /**
+     * Return a request extensions for the given type. Extensions are a type-safe way for middleware to associate
+     * additional information with a request.
+     * <p/>
+     * For example you could define a session class:
+     * <code>
+     *     class Session {
+     *         String id;
+     *         String username;
+     *     }
+     * </code>
+     * And then populate it with a middleware handler:
+     * <code>
+     *     sessionHandler = request -> {
+     *         String sessionId = request.cookie("sessionId").orElse(null);
+     *
+     *         Session session;
+     *         if (sessionId == null) {
+     *             session = sessionStore.newSession();
+     *         } else {
+     *             session = sesionStore.get(sessionId);
+     *         }
+
+     *         request.extend(session);
+     *
+     *         Response response = nextHandler.handle(request);
+     *
+     *         if (sessionId == null) {
+     *             response.cookie("sessionId", session.id);
+     *         }
+     *
+     *         return response;
+     *     };
+     * </code>
+     * The session can then be later retrieved:
+     * <code>
+     *     router.on(GET, "/greeting", request -> ok("Hello, " + request.extension(Session.class).username));
+     * </code>
+     */
+    public <T> T extension(Class<T> extensionClass) {
+        return (T) extensions.get(extensionClass);
+    }
+
+    /**
+     * Add a request extension. Shorthand for <code>request.extend(extension.getClass(), extension)</code>
+     */
+    public void extend(Object extension) {
+        extensions.put(extension.getClass(), extension);
+    }
+
+    /**
+     * Add a request extension with a given type. Use this method if you want to use an interface or superclass as the
+     * extension's type.
+     */
+    public <T> void extend(Class<T> extensionClass, T extension) {
+        extensions.put(extensionClass, extension);
     }
 }
