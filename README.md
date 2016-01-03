@@ -24,7 +24,7 @@ Usage
 HttpRouter router = new HttpRouter();
 router.on(GET, "/", request -> ok("Hello world!"));
 
-HttpServer server = new HttpServer(router, 8080);
+HttpServer server = new HttpServer(router, new ServerSocket(8080));
 server.serve();
 ```
 

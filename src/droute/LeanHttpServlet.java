@@ -5,7 +5,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Enumeration;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * An adapter for using LeanHttp on top of a servlet container. Instantiates an instance of the class given by the
@@ -51,9 +54,33 @@ public final class LeanHttpServlet extends HttpServlet {
         this.handler = handler;
     }
 
+    private Map<String, String> copyHeaders(HttpServletRequest servletRequest) {
+        Map<String,String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        Enumeration names = servletRequest.getHeaderNames();
+        while (names.hasMoreElements()) {
+            String name = (String)names.nextElement();
+            Enumeration values = servletRequest.getHeaders(name);
+            while (values.hasMoreElements()) {
+                headers.put(name, (String)values.nextElement());
+            }
+        }
+        return headers;
+    }
+
     @Override
     protected void service(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws ServletException, IOException {
-        HttpRequest request = new ServletHttpRequest(servletRequest, servletResponse);
+        HttpRequest request = new HttpRequest(
+                servletRequest.getMethod(),
+                servletRequest.getPathInfo(),
+                servletRequest.getQueryString(),
+                servletRequest.getScheme(),
+                servletRequest.getProtocol(),
+                InetSocketAddress.createUnresolved(servletRequest.getRemoteAddr(), servletRequest.getRemotePort()),
+                InetSocketAddress.createUnresolved(servletRequest.getLocalAddr(), servletRequest.getLocalPort()),
+                servletRequest.getContextPath(),
+                copyHeaders(servletRequest),
+                servletRequest.getInputStream()
+        );
         HttpResponse response = handler.handle(request);
         respond(response, servletResponse);
     }

@@ -1,7 +1,6 @@
 package droute;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -20,14 +19,6 @@ public final class HttpServer implements Runnable, Closeable {
     public HttpServer(HttpHandler handler, ServerSocket serverSocket) {
         this.handler = handler;
         this.serverSocket = serverSocket;
-    }
-
-    public HttpServer(HttpHandler handler, int port) throws IOException {
-        this(handler, new ServerSocket(port));
-    }
-
-    public HttpServer(HttpHandler handler, String bindHost, int port) throws IOException {
-        this(handler, new ServerSocket(port, -1, InetAddress.getByName(bindHost)));
     }
 
     /**
@@ -129,7 +120,9 @@ public final class HttpServer implements Runnable, Closeable {
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                if (!e.getMessage().equals("Socket closed")) {
+                    e.printStackTrace();
+                }
             } finally {
                 connections.remove(this);
                 try {
@@ -175,7 +168,7 @@ public final class HttpServer implements Runnable, Closeable {
             String contentLengthField = parser.headers.get("Content-Length");
             long contentLength = contentLengthField == null ? 0 : Long.parseLong(contentLengthField);
             BoundedInputStream bodyStream = new BoundedInputStream(in, contentLength);
-            return new SimpleHttpRequest(parser.method, parser.path, parser.query, "http",
+            return new HttpRequest(parser.method, parser.path, parser.query, "http",
                     parser.version != null ? parser.version.toUpperCase(Locale.US) : HTTP10,
                     remoteAddress, localAddress,
                     "/", parser.headers, bodyStream);

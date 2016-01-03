@@ -88,30 +88,30 @@ public class HttpRouterTest {
         router.on(GET, "/sesame/<numbers:[0-9]+>", handler(ok("numbers")));
         router.resources("/assets", "droute/assets");
 
-        assertBody("triple", router.handle(GET("/triple/antelope/banana/cabbage?question=yes&quality=3")));
-        assertBody("simple-get", router.handle(GET("/simple")));
-        assertBody("simple-options", router.handle(OPTIONS("/simple")));
-        assertBody("simple-put", router.handle(PUT("/simple")));
-        assertBody("simple-post", router.handle(POST("/simple")));
-        assertBody("simple-delete", router.handle(DELETE("/simple")));
-        assertBody("simple-head", router.handle(HEAD("/simple")));
-        assertBody("simple-patch", router.handle(PATCH("/simple")));
+        assertBody("triple", router.handle(request(GET, "/triple/antelope/banana/cabbage?question=yes&quality=3")));
+        assertBody("simple-get", router.handle(request(GET, "/simple")));
+        assertBody("simple-options", router.handle(request(OPTIONS, "/simple")));
+        assertBody("simple-put", router.handle(request(PUT, "/simple")));
+        assertBody("simple-post", router.handle(request(POST, "/simple")));
+        assertBody("simple-delete", router.handle(request(DELETE, "/simple")));
+        assertBody("simple-head", router.handle(request(HEAD, "/simple")));
+        assertBody("simple-patch", router.handle(request(PATCH, "/simple")));
         assertBody("wibbled", router.handle(request("WIbbLE", "/wibbler")));
         assertBody("any", router.handle(request("WOBBLE", "/wibbler")));
-        assertBody("letters", router.handle(GET("/sesame/abc")));
-        assertBody("numbers", router.handle(GET("/sesame/123")));
-        assertEquals(null, router.handle(GET("/sesame/---")));
+        assertBody("letters", router.handle(request(GET, "/sesame/abc")));
+        assertBody("numbers", router.handle(request(GET, "/sesame/123")));
+        assertEquals(null, router.handle(request(GET, "/sesame/---")));
 
         {
-            HttpResponse response = router.handle(GET("/assets/sample.txt"));
+            HttpResponse response = router.handle(request(GET, "/assets/sample.txt"));
             assertEquals("text/plain", response.headers().get("Content-Type"));
             assertBody("Sample text file", response);
         }
 
-        assertEquals(null, router.handle(GET("/assets/doesntexist")));
-        assertEquals(null, router.handle(GET("/doesntexist")));
+        assertEquals(null, router.handle(request(GET, "/assets/doesntexist")));
+        assertEquals(null, router.handle(request(GET, "/doesntexist")));
     }
-
+    
     private static void assertBody(String expected, HttpResponse actual) throws IOException {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         actual.body().writeTo(buf);
@@ -120,28 +120,8 @@ public class HttpRouterTest {
 
     private HttpRequest request(String method, String uri) {
         URI parsed = URI.create(uri);
-        Map<String,String> headers = new TreeMap<String,String>(String.CASE_INSENSITIVE_ORDER);
-        return new SimpleHttpRequest(method, parsed.getPath(), parsed.getQuery(), "http", "HTTP/1.1", null, null, "/", headers, null);
+        Map<String,String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        return new HttpRequest(method, parsed.getPath(), parsed.getQuery(), "http", "HTTP/1.1", null, null, "/", headers, null);
     }
-    private HttpRequest GET(String uri) {
-        return request("GET", uri);
-    }
-    private HttpRequest PUT(String uri) {
-        return request("PUT", uri);
-    }
-    private HttpRequest DELETE(String uri) {
-        return request("DELETE", uri);
-    }
-    private HttpRequest OPTIONS(String uri) {
-        return request("OPTIONS", uri);
-    }
-    private HttpRequest HEAD(String uri) {
-        return request("HEAD", uri);
-    }
-    private HttpRequest PATCH(String uri) {
-        return request("PATCH", uri);
-    }
-    private HttpRequest POST(String uri) {
-        return request("POST", uri);
-    }
+
 }

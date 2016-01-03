@@ -2,10 +2,7 @@ package droute;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -93,12 +90,12 @@ public final class HttpRouter implements HttpHandler, AutoCloseable {
             if (method == null || method.equalsIgnoreCase(request.method())) {
                 Matcher m = re.matcher(request.path());
                 if (m.matches()) {
-                    MultiMap<String,String> oldParams = request.params();
-                    MultiMap<String,String> params = new MultiMap<>(new HashMap<String,List<String>>());
+                    Map<String, List<String>> oldParams = request.params();
+                    Map<String, List<String>> params = new HashMap<String,List<String>>();
 
                     for (int i = 0; i < m.groupCount(); i++) {
                         String key = keys.get(i);
-                        params.add(key, m.group(i + 1));
+                        MultiMaps.addEntry(params, key, m.group(i + 1));
                     }
 
                     try {
