@@ -21,22 +21,13 @@ Usage
 -----
 
 ```java
+import org.meshy.leanhttp.*;
+import static org.meshy.leanhttp.WebResponses.*;
+import static org.meshy.leanhttp.WebResponses.*;
+
 HttpRouter router = new HttpRouter();
 router.on(GET, "/", request -> ok("Hello world!"));
 
 HttpServer server = new HttpServer(router, new ServerSocket(8080));
 server.serve();
 ```
-
-Core Abstraction
-----------------
-
-URL Router
-----------
-
-Builtin Webserver
------------------
-
-Deploying to a Servlet Container
---------------------------------
-
