@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class HttpRequestTest {
 
@@ -43,5 +44,13 @@ public class HttpRequestTest {
         assertEquals("rain", request.cookies().get("weather"));
 
         assertEquals("http://127.0.0.1/path?one&foo=bar&&baz=&", request.uri().toString());
+    }
+
+    @Test
+    public void testEmptyQueryString() {
+        HttpRequest req = new HttpRequest("GET", "/path", null, "http", "HTTP/1.1",
+                InetSocketAddress.createUnresolved("127.0.0.1", 1234), InetSocketAddress.createUnresolved("127.0.0.1", 80),
+                "/app", headers, new ByteArrayInputStream("number=1&number=2&mouse=on&wicket[]&&soccer".getBytes(StandardCharsets.UTF_8)));
+        assertTrue(req.queryMap().isEmpty());
     }
 }

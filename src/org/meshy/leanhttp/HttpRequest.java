@@ -229,6 +229,9 @@ public class HttpRequest {
 
     protected Map<String, List<String>> parseQueryMap() {
         try {
+            if (queryString() == null) {
+                return Collections.emptyMap();
+            }
             return HttpRequest.parseFormData(new ByteArrayInputStream(queryString().getBytes(StandardCharsets.US_ASCII)));
         } catch (IOException e) {
             throw new RuntimeException(e);
