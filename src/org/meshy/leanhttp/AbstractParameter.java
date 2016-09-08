@@ -177,4 +177,8 @@ abstract class AbstractParameter {
             throw  new ParameterFormatException(name, e);
         }
     }
+
+    public String toString() {
+        return orElse("null");
+    }
 }

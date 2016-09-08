@@ -1,5 +1,6 @@
 package org.meshy.leanhttp;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -154,6 +155,12 @@ class HttpRequestParser {
             state = opcode & 0xf;
         }
         return length;
+    }
+
+    int parse(ByteBuffer buffer) {
+        int consumed = parse(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.arrayOffset() + buffer.limit());
+        buffer.position(buffer.position() + consumed);
+        return consumed;
     }
 
     /**

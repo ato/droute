@@ -4,6 +4,9 @@ import java.util.*;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
+/**
+ * A response message to be sent by the server to a client.
+ */
 public final class HttpResponse {
     private static final BitSet HEADER_NAME_CHARS = charBitSet("!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~^`|");
     private final Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -11,11 +14,14 @@ public final class HttpResponse {
     private int status = 200;
     private HttpPayload body;
 
+    /**
+     * Constructs an empty 200 OK response.
+     */
     public HttpResponse() {
     }
 
     /**
-     * Copy constructor.
+     * Constructs a copy of a response.
      */
     public HttpResponse(HttpResponse response) {
         this.status = response.status;
@@ -66,6 +72,12 @@ public final class HttpResponse {
         return Collections.unmodifiableMap(headers);
     }
 
+    /**
+     * Adds a response header field. If there is an existing value the new value will be appended after a separating
+     * comma.
+     *
+     * As a special case the Set-Cookie header will be emitted multiple times rather than being comma-separated.
+     */
     public void addHeader(String key, String value) {
         validateHeaderName(key);
         validateHeaderValue(value);
@@ -77,6 +89,9 @@ public final class HttpResponse {
         }
     }
 
+    /**
+     * Sets a response header field. Replaces any existing header fields with the same key.
+     */
     public void setHeader(String key, String value) {
         validateHeaderName(key);
         validateHeaderValue(value);
@@ -88,6 +103,9 @@ public final class HttpResponse {
         }
     }
 
+    /**
+     * Sets the 3-digit response status code. Use {@link HttpStatus} for standard values.
+     */
     public void setStatus(int status) {
         if (status < 100 || status > 999) {
             throw new IllegalArgumentException("Illegal HTTP status code: " + status + " (must be 3 digits)");
@@ -95,10 +113,16 @@ public final class HttpResponse {
         this.status = status;
     }
 
+    /**
+     * Sets the payload that forms the body of this response.
+     */
     public void setBody(HttpPayload body) {
         this.body = body;
     }
 
+    /**
+     * Gets the payload that forms he body of this response.
+     */
     public HttpPayload body() {
         return body;
     }

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class InputStreamPayload implements HttpPayload {
+class InputStreamPayload implements HttpPayload {
     private final InputStream stream;
 
     public InputStreamPayload(InputStream stream) {

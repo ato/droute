@@ -10,6 +10,9 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * A request message that was received from a client by the server.
+ */
 public class HttpRequest {
 
     private static final Pattern HOST_RE = Pattern.compile("([a-z0-9.-]+|\\[[a-f0-9]*:[a-f0-9:]+\\])(:\\d+)?");
@@ -18,35 +21,49 @@ public class HttpRequest {
     private static final String COOKIE_VALUE = "(?:(" + COOKIE_OCTET + "*)|\"(" + COOKIE_OCTET + "*)\")";
     private static final Pattern RE_COOKIE_PAIR = Pattern.compile("(" + COOKIE_NAME + ")=" + COOKIE_VALUE);
     private final String method;
+    private final String contextPath;
+    private final String pathInfo;
     private final String path;
     private final String queryString;
     private final String scheme;
     private final InetSocketAddress remoteAddress;
     private final InetSocketAddress localAddress;
-    private final String contextPath;
     private final Map<String, String> headers;
     private final InputStream bodyStream;
     private final String protocol;
     private final Map<Class, Object> extensions = new HashMap<>();
-    protected Map<String, String> cachedCookies = null;
-    protected Map<String, List<String>> cachedFormMap = null;
-    protected Map<String, List<String>> cachedQueryMap = null;
-    protected Map<String, List<String>> params = new HashMap<>();
+    private Map<String, String> cachedCookies = null;
+    private Map<String, List<String>> cachedFormMap = null;
+    private Map<String, List<String>> cachedQueryMap = null;
+    private Map<String, List<String>> params = new HashMap<>();
 
-    public HttpRequest(String method, String path, String queryString, String scheme, String protocol, InetSocketAddress remoteAddress, InetSocketAddress localAddress, String contextPath, Map<String, String> headers, InputStream bodyStream) {
+    public HttpRequest(String method, String contextPath, String pathInfo, String queryString, String scheme,
+                       String protocol, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
+                       Map<String, String> headers, InputStream bodyStream) {
         this.method = method;
-        this.path = path;
+        this.contextPath = contextPath;
+        this.pathInfo = pathInfo;
         this.queryString = queryString;
         this.scheme = scheme;
         this.protocol = protocol;
         this.remoteAddress = remoteAddress;
         this.localAddress = localAddress;
-        this.contextPath = contextPath;
         this.headers = headers;
         this.bodyStream = bodyStream;
+        path = buildPath(contextPath, pathInfo);
     }
 
-    static String determineHost(HttpRequest request) {
+    private static String buildPath(String contextPath, String pathInfo) {
+        if (!pathInfo.startsWith("/")) {
+            throw new IllegalArgumentException("pathInfo must begin with /");
+        } else if (!contextPath.startsWith("/")) {
+            throw new IllegalArgumentException("contextPath must begin with /");
+        } else {
+            return contextPath.equals("/") ? pathInfo : contextPath + pathInfo;
+        }
+    }
+
+    private static String determineHost(HttpRequest request) {
         String host = request.header("Host").orElse(null);
         if (host != null) {
             Matcher m = HOST_RE.matcher(host);
@@ -57,7 +74,7 @@ public class HttpRequest {
         return request.localAddress().getHostName();
     }
 
-    static Map<String, String> parseCookieHeader(String cookieHeader) {
+    private static Map<String, String> parseCookieHeader(String cookieHeader) {
         Map<String, String> cookies = new HashMap<>();
         if (cookieHeader != null) {
             for (String pair : cookieHeader.split("; *")) {
@@ -70,7 +87,7 @@ public class HttpRequest {
         return cookies;
     }
 
-    static Map<String, List<String>> parseFormData(InputStream in) throws IOException {
+    private static Map<String, List<String>> parseFormData(InputStream in) throws IOException {
         Map<String, List<String>> map = new TreeMap<>();
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         String key = null;
@@ -155,17 +172,28 @@ public class HttpRequest {
     }
 
     /**
-     * The path of this request relative to the context root (excluding the query string).
+     * The full path of this request including the context path and up to the query string. Always begins with a /.
      * <p/>
-     * For example if the application is mounted at /bakery and /bakery/scones/lemonade was requested, this returns
-     * "/scones/lemonade".
+     * For example if the context path is /bakery and /bakery/muffins/choc?warm=1 was requested, this returns
+     * /bakery/muffins/choc.
      */
     public String path() {
         return path;
     }
 
     /**
-     * The path to the root of the web application.
+     * The path of this request between the context path and up to the query string. Always begins with a /. Typically
+     * used for matching against routes.
+     * <p/>
+     * For example if the context path is /bakery and /bakery/muffins/choc?warm=1 was requested, this returns
+     * /muffins/choc.
+     */
+    public String pathInfo() {
+        return pathInfo;
+    }
+
+    /**
+     * The path to the root of the web application. Always begins with a /.
      */
     public String contextPath() {
         return contextPath;
@@ -182,7 +210,7 @@ public class HttpRequest {
     public String toString() {
         return "RequestImpl{" +
                 "method='" + method + '\'' +
-                ", path='" + path + '\'' +
+                ", pathInfo='" + pathInfo + '\'' +
                 ", queryString='" + queryString + '\'' +
                 ", scheme='" + scheme + '\'' +
                 ", remoteAddress=" + remoteAddress +

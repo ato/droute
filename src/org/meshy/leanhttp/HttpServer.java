@@ -7,16 +7,38 @@ import java.net.Socket;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
+import static org.meshy.leanhttp.HttpRequests.HTTP10;
+
+/**
+ * A simple threaded HTTP Server.
+ *
+ * One thread is used for each connection. The deafult thread pool is an unbounded instance of
+ * Executors.newCachedThreadPool().
+ */
 public final class HttpServer implements Runnable, Closeable {
+    private final Executor threadPool;
     private final ServerSocket serverSocket;
     private final HttpHandler handler;
     private final Set<Connection> connections = Collections.newSetFromMap(new ConcurrentHashMap<Connection,Boolean>());
 
+    /**
+     * Constructs a new HttpServer from a listening socket.
+     */
     public HttpServer(HttpHandler handler, ServerSocket serverSocket) {
         this.handler = handler;
         this.serverSocket = serverSocket;
+        threadPool = Executors.newCachedThreadPool(new WorkerThreadFactory());
+    }
+
+    /**
+     * Constructs a new HttpServer with a custom thread pool.
+     */
+    public HttpServer(HttpHandler handler, ServerSocket serverSocket, Executor threadPool) {
+        this.handler = handler;
+        this.serverSocket = serverSocket;
+        this.threadPool = threadPool;
     }
 
     /**
@@ -39,10 +61,7 @@ public final class HttpServer implements Runnable, Closeable {
 
             Connection connection = new Connection(socket);
             connections.add(connection);
-            Thread thread = new Thread(connection);
-            thread.setName(getClass().getName() + " connection from " + socket.getRemoteSocketAddress());
-            thread.setDaemon(true);
-            thread.start();
+            threadPool.execute(connection);
         }
     }
 
@@ -64,7 +83,7 @@ public final class HttpServer implements Runnable, Closeable {
     }
 
     /**
-     * Closes the listening socket and all open connections.
+     * Closes the listening socket and all open connections then shuts down the thread pool.
      *
      * @throws IOException if a socket could not be closed
      */
@@ -73,6 +92,10 @@ public final class HttpServer implements Runnable, Closeable {
 
         for (Connection connection : connections) {
             connection.close();
+        }
+
+        if (threadPool instanceof ExecutorService) {
+            ((ExecutorService)threadPool).shutdownNow();
         }
     }
 
@@ -96,11 +119,11 @@ public final class HttpServer implements Runnable, Closeable {
 
         public void run() {
             try {
+                Thread.currentThread().setName("HttpServer connection from " + socket.getRemoteSocketAddress());
                 while (fillBuffer()) {
                     bufPos += parser.parse(buffer, bufPos, bufEnd - bufPos);
 
                     if (parser.isError()) {
-                        System.err.println("parse error");
                         sendResponse(null, HttpResponses.response(400, "Bad Request"));
                         break;
                     } else if (parser.isFinished()) {
@@ -128,6 +151,7 @@ public final class HttpServer implements Runnable, Closeable {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                Thread.currentThread().setName("HttpServer idle worker");
             }
         }
 
@@ -166,13 +190,13 @@ public final class HttpServer implements Runnable, Closeable {
             String contentLengthField = parser.headers.get("Content-Length");
             long contentLength = contentLengthField == null ? 0 : Long.parseLong(contentLengthField);
             BoundedInputStream bodyStream = new BoundedInputStream(in, contentLength);
-            return new HttpRequest(parser.method, parser.path, parser.query, "http",
-                    parser.version != null ? parser.version.toUpperCase(Locale.US) : HttpRequests.HTTP10,
+            return new HttpRequest(parser.method, "/", parser.path, parser.query, "http",
+                    parser.version != null ? parser.version.toUpperCase(Locale.US) : HTTP10,
                     remoteAddress, localAddress,
-                    "/", parser.headers, bodyStream);
+                    parser.headers, bodyStream);
         }
 
-        void sendResponse(HttpRequest request, HttpResponse response) throws IOException {
+        private void sendResponse(HttpRequest request, HttpResponse response) throws IOException {
             if (!response.headers().containsKey("Date")) {
                 response.setHeader("Date", HttpResponses.formatHttpDate(System.currentTimeMillis()));
             }
@@ -182,7 +206,7 @@ public final class HttpServer implements Runnable, Closeable {
                 response.setHeader("Content-Length", Long.toString(response.body().length()));
             }
 
-            if (request.protocol().equals(HttpRequests.HTTP10)) {
+            if (request.protocol().equals(HTTP10)) {
                 if (payloadLength >= 0 && request.header("Connection").orElse("close").equalsIgnoreCase("keep-alive")) {
                     response.setHeader("Connection", "keep-alive");
                     sendResponseWithKnownLength(response, payloadLength);
@@ -258,6 +282,16 @@ public final class HttpServer implements Runnable, Closeable {
          */
         public void close() throws IOException {
             this.socket.close();
+        }
+    }
+
+    static class WorkerThreadFactory implements ThreadFactory {
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thread = new Thread(r);
+            thread.setName("HttpServer initialising worker");
+            thread.setDaemon(true);
+            return thread;
         }
     }
 }

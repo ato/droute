@@ -1,7 +1,7 @@
 package org.meshy.leanhttp;
 
 /**
- * HTTP Status codes
+ * HTTP response status codes
  */
 public final class HttpStatus {
     public final static int CONTINUE = 100;

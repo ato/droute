@@ -24,11 +24,9 @@ public class HttpRequestTest {
         headers.put("Content-Type", "application/x-www-form-urlencoded");
         headers.put("Cookie", "weather=rain; __TINY_MOON=1");
         headers.put("Host", "totally bogus, whoopsie");
-        request = new HttpRequest("GET", "/path", "one&foo=bar&&baz=&", "http", "HTTP/1.1",
+        request = new HttpRequest("GET", "/app", "/path", "one&foo=bar&&baz=&", "http", "HTTP/1.1",
                 InetSocketAddress.createUnresolved("127.0.0.1", 1234), InetSocketAddress.createUnresolved("127.0.0.1", 80),
-                "/app", headers, new ByteArrayInputStream("number=1&number=2&mouse=on&wicket[]&&soccer".getBytes(StandardCharsets.UTF_8)));
-
-
+                headers, new ByteArrayInputStream("number=1&number=2&mouse=on&wicket[]&&soccer".getBytes(StandardCharsets.UTF_8)));
     }
 
     @Test
@@ -43,14 +41,14 @@ public class HttpRequestTest {
         assertEquals(1, request.cookie("__TINY_MOON").asInt());
         assertEquals("rain", request.cookies().get("weather"));
 
-        assertEquals("http://127.0.0.1/path?one&foo=bar&&baz=&", request.uri().toString());
+        assertEquals("http://127.0.0.1/app/path?one&foo=bar&&baz=&", request.uri().toString());
     }
 
     @Test
     public void testEmptyQueryString() {
-        HttpRequest req = new HttpRequest("GET", "/path", null, "http", "HTTP/1.1",
+        HttpRequest req = new HttpRequest("GET", "/app", "/path", null, "http", "HTTP/1.1",
                 InetSocketAddress.createUnresolved("127.0.0.1", 1234), InetSocketAddress.createUnresolved("127.0.0.1", 80),
-                "/app", headers, new ByteArrayInputStream("number=1&number=2&mouse=on&wicket[]&&soccer".getBytes(StandardCharsets.UTF_8)));
+                headers, new ByteArrayInputStream("number=1&number=2&mouse=on&wicket[]&&soccer".getBytes(StandardCharsets.UTF_8)));
         assertTrue(req.queryMap().isEmpty());
     }
 }

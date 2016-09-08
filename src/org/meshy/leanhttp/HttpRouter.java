@@ -6,8 +6,12 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.meshy.leanhttp.HttpRequests.*;
 import static org.meshy.leanhttp.HttpResponses.resource;
 
+/**
+ * Routes HTTP requests to handlers by matching the request's path info against a set of patterns.
+ */
 public final class HttpRouter implements HttpHandler, AutoCloseable {
     private final List<HttpHandler> routes = new ArrayList<>();
 
@@ -40,20 +44,35 @@ public final class HttpRouter implements HttpHandler, AutoCloseable {
         return null;
     }
 
-    public void addHandler(HttpHandler handler) {
+    public void handler(HttpHandler handler) {
         routes.add(handler);
     }
 
     public void on(String method, String pathPattern, HttpHandler handler) {
-        addHandler(new Route(method, pathPattern, handler));
+        handler(new Route(method, pathPattern, handler));
     }
 
-    public void resources(String urlPrefix, String resourcesRoot) {
-        on(HttpRequests.GET, urlPrefix + "/<resource:.+>", new ResourcesHandler(resourcesRoot));
+    public void onGet(String pathPattern, HttpHandler handler) {
+        on(GET, pathPattern, handler);
+    }
+
+    public void onPost(String pathPattern, HttpHandler handler) {
+        on(POST, pathPattern, handler);
+    }
+
+    public void onPut(String pathPattern, HttpHandler handler) {
+        on(PUT, pathPattern, handler);
+    }
+
+    public void onDelete(String pathPattern, HttpHandler handler) {
+        on(DELETE, pathPattern, handler);
+    }
+
+    public void resources(String pathPrefix, String resourcesRoot) {
+        on(GET, pathPrefix + "/<resource:.+>", new ResourcesHandler(resourcesRoot));
     }
 
     static class ResourcesHandler implements HttpHandler {
-
         private final String resourcesRoot;
 
         ResourcesHandler(String resourcesRoot) {
@@ -62,8 +81,11 @@ public final class HttpRouter implements HttpHandler, AutoCloseable {
 
         @Override
         public HttpResponse handle(HttpRequest request) throws IOException {
-            String path = resourcesRoot + "/" + request.param("resource").get().replace("../", "");
-            URL url = Thread.currentThread().getContextClassLoader().getResource(path);
+            String path = request.param("resource").get();
+            if (path.startsWith("../") || path.contains("/../") || path.startsWith("./") || path.contains("/./")) {
+                return null; // traversal is not allowed
+            }
+            URL url = Thread.currentThread().getContextClassLoader().getResource(resourcesRoot + "/" + path);
             return url == null ? null : resource(url);
         }
     }

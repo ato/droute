@@ -14,15 +14,6 @@ import java.util.TreeMap;
  * An adapter for using LeanHttp on top of a servlet container. Instantiates an instance of the class given by the
  * 'handlerClass' init parameter using reflection. The handler class must have a public default constructor.  If the
  * handler implements AutoCloseable then its close() method will be called when the servler is destroyed.
- * <p/>
- * If necessary, the underlying HttpServletRequest and HttpServletResponse objects from the container may be accessed
- * from inside the handler like so:
- * <code>
- *     if (request instanceof ServletHttpRequest) {
- *         HttpServletRequest servletRequest = ((ServletHttpRequest)request).servletRequest()
- *         HttpServletResponse servletResponse = ((ServletHttpResponse)request).servletResponse()
- *     }
- * </code>
  */
 public final class LeanHttpServlet extends HttpServlet {
     private HttpHandler handler;
@@ -71,13 +62,12 @@ public final class LeanHttpServlet extends HttpServlet {
     protected void service(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws ServletException, IOException {
         HttpRequest request = new HttpRequest(
                 servletRequest.getMethod(),
-                servletRequest.getPathInfo(),
+                servletRequest.getContextPath(), servletRequest.getPathInfo(),
                 servletRequest.getQueryString(),
                 servletRequest.getScheme(),
                 servletRequest.getProtocol(),
                 InetSocketAddress.createUnresolved(servletRequest.getRemoteAddr(), servletRequest.getRemotePort()),
                 InetSocketAddress.createUnresolved(servletRequest.getLocalAddr(), servletRequest.getLocalPort()),
-                servletRequest.getContextPath(),
                 copyHeaders(servletRequest),
                 servletRequest.getInputStream()
         );

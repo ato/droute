@@ -121,7 +121,7 @@ public class HttpRouterTest {
     private HttpRequest request(String method, String uri) {
         URI parsed = URI.create(uri);
         Map<String,String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        return new HttpRequest(method, parsed.getPath(), parsed.getQuery(), "http", "HTTP/1.1", null, null, "/", headers, null);
+        return new HttpRequest(method, "/", parsed.getPath(), parsed.getQuery(), "http", "HTTP/1.1", null, null, headers, null);
     }
 
 }

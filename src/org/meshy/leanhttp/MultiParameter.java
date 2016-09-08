@@ -3,6 +3,9 @@ package org.meshy.leanhttp;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * A {@link Parameter} which may have multiple values.
+ */
 public class MultiParameter extends AbstractParameter {
     private final List<String> values;
 

@@ -3,7 +3,7 @@ package org.meshy.leanhttp;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class ByteArrayPayload implements HttpPayload {
+class ByteArrayPayload implements HttpPayload {
     final byte[] bytes;
 
     public ByteArrayPayload(byte[] bytes) {

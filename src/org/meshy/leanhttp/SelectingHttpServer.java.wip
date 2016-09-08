@@ -1,0 +1,210 @@
+package org.meshy.leanhttp;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static java.nio.channels.SelectionKey.OP_READ;
+import static java.nio.channels.SelectionKey.OP_WRITE;
+import static org.meshy.leanhttp.SelectingHttpServer.State.*;
+import static org.meshy.leanhttp.HttpRequests.HTTP10;
+
+class SelectingHttpServer {
+    private final ExecutorService workerPool;
+    private final Selector selector;
+    private ByteBuffer buffer = ByteBuffer.allocate(4096);
+
+    public SelectingHttpServer() throws IOException {
+        this.selector = Selector.open();
+        workerPool = Executors.newFixedThreadPool(4);
+        buffer = ByteBuffer.allocate(8192);
+    }
+
+    public synchronized void listen(ServerSocketChannel channel, HttpHandler handler) throws IOException {
+        channel.configureBlocking(false);
+        channel.register(selector, SelectionKey.OP_ACCEPT, handler);
+    }
+
+    public synchronized void close() throws IOException {
+        for (SelectionKey key : selector.keys()) {
+            key.channel().close();
+        }
+        selector.close();
+        buffer = null;
+    }
+
+
+    void run() throws IOException {
+        while (selector.isOpen()) {
+            selector.select();
+            for (SelectionKey key : selector.selectedKeys()) {
+                if (key.isAcceptable()) {
+                    SocketChannel channel = ((ServerSocketChannel)key.channel()).accept();
+                    channel.configureBlocking(false);
+                    channel.register(selector, OP_READ, new Connection(channel, (HttpHandler) key.attachment()));
+                } else if (key.isReadable() || key.isWritable()) {
+                    ((Connection)key.attachment()).handleEvent();
+                }
+            }
+            selector.selectedKeys().clear();
+        }
+    }
+
+    enum State {
+        READING, QUEUED, WORKING, WRITING, TEARDOWN
+    }
+
+    class Connection {
+        State state = READING;
+        private SelectionKey selectionKey = null;
+        private final SocketChannel socket;
+        private final HttpHandler handler;
+        private HttpRequestParser parser;
+        private ByteBuffer responseBuffer = null;
+        boolean keepalive = false;
+        private HttpRequest request = null;
+
+        Connection(SocketChannel socket, HttpHandler handler) {
+            this.socket = socket;
+            this.handler = handler;
+        }
+
+        void handleEvent() {
+            switch (state) {
+                case READING:
+                    handleReading();
+                    break;
+                case WRITING:
+                    handleWriting();
+                    break;
+                case TEARDOWN:
+                    handleTeardown();
+                    break;
+                default:
+                    throw new IllegalStateException(state.name());
+            }
+        }
+
+        /**
+         * Receive and parse a part of a HTTP request. Once a whole request is received queue it for a worker thread to
+         * dispatch. If a parse error occurs send 400 Bad request.
+         */
+        private void handleReading() throws IOException {
+            buffer.clear();
+            int n = socket.read(buffer);
+            buffer.flip();
+            parser.parse(buffer);
+
+            if (parser.isFinished()) {
+                selectionKey.cancel();
+                selectionKey = null;
+                socket.configureBlocking(true);
+                request = createRequest();
+                parser = null;
+                state = QUEUED;
+                workerPool.submit(this::dispatch);
+            } else if (parser.isError()) {
+                sendBadRequest();
+            }
+        }
+
+        /**
+         * Send part of a HTTP response. Once the whole response has been sent, switch to reading if this is a keepalive
+         * connection, otherwise tear it down.
+         */
+        private void handleWriting() throws IOException {
+            while (socket.write(responseBuffer) > 0) {
+                if (!responseBuffer.hasRemaining()) {
+                    responseBuffer = null;
+                    if (keepalive) {
+                        beginReading();
+                    } else {
+                        beginTeardown();
+                    }
+                    return;
+                }
+            }
+        }
+
+        /**
+         * Consume any remaining input. If there's no more input close the socket.
+         */
+        private void handleTeardown() throws IOException {
+            int n;
+            do {
+                buffer.clear();
+                n = socket.read(buffer);
+            } while (n > 0);
+            if (n == -1) {
+                socket.close();
+            }
+        }
+
+        /**
+         * Dispatch a request to the handler.
+         */
+        private void dispatch() {
+            state = WORKING;
+            HttpResponse response = handler.handle(request);
+
+
+        }
+
+        void sendBadRequest() throws IOException {
+            keepalive = false;
+            responseBuffer = ByteBuffer.wrap("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\nBad request\r\n".getBytes(StandardCharsets.UTF_8));
+            register(OP_WRITE);
+            state = READING;
+        }
+
+        /**
+         * Prepare to read a new request.
+         */
+        void beginReading() throws IOException {
+            state = READING;
+            register(OP_READ);
+            parser = new HttpRequestParser();
+        }
+
+        /**
+         * Close the output end of the socket and prepare to discard any input until the client closes their end.
+         */
+        void beginTeardown() throws IOException {
+            state = TEARDOWN;
+            register(OP_READ);
+            socket.shutdownOutput();
+        }
+
+        void register(int ops) throws IOException {
+            if (selectionKey == null) {
+                socket.configureBlocking(false);
+                selectionKey = socket.register(selector, ops, this);
+            } else {
+                selectionKey.interestOps(ops);
+            }
+        }
+
+        private HttpRequest createRequest() throws IOException {
+            String contentLengthField = parser.headers.get("Content-Length");
+            long contentLength = contentLengthField == null ? 0 : Long.parseLong(contentLengthField);
+            BoundedInputStream bodyStream = new BoundedInputStream(Channels.newInputStream(socket), contentLength);
+            return new HttpRequest(parser.method, parser.path, parser.query, "http",
+                    parser.version != null ? parser.version.toUpperCase(Locale.US) : HTTP10,
+                    (InetSocketAddress)socket.getRemoteAddress(), (InetSocketAddress)socket.getLocalAddress(),
+                    "/", parser.headers, bodyStream);
+        }
+    }
+
+    public static void main(String args[]) throws IOException {
+        SelectingHttpServer server = new SelectingHttpServer();
+        server.listen(ServerSocketChannel.open().bind(
+                new InetSocketAddress("127.0.0.1", 8080)), null );
+        server.run();
+
+    }
+}

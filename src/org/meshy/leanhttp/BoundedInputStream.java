@@ -23,7 +23,6 @@ import java.io.InputStream;
 /**
  * A stream that limits reading from a wrapped stream to a given number of bytes.
  * @NotThreadSafe
- * @since 1.6
  */
 class BoundedInputStream extends InputStream {
     private final InputStream in;
